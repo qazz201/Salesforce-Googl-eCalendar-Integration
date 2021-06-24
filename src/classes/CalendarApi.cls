@@ -79,17 +79,13 @@ public with sharing class CalendarApi {
         String endpoint = apiEndpoints.get(endpointName);
 
         if (endpoint == null) {
-            this.throwCustomException('No such endpointName ' + endpointName);
+            throw new CalendarApiException('No such endpointName ' + endpointName);
         }
 
         return endpoint;
     }
 
     //////////// EXCEPTION ///////////////////////////////////////
-    private void throwCustomException(String msg) {
-        throw new CalendarApiException(msg);
-    }
-
     public class CalendarApiException extends Exception {
     }
 
