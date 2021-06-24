@@ -109,12 +109,10 @@ public with sharing class CalloutClient {
 
         if (requestBody instanceOf Blob) {
             this.request.setBodyAsBlob((Blob) requestBody);
-            // this.setHeader('Content-Type', 'multipart/form-data; charset=utf-8');
         } else if (requestBody instanceOf String) {
             this.request.setBody((String) requestBody);
         } else {
             this.request.setBody(Json.serialize(requestBody));
-            // this.setHeader('Content-Type', 'application/json; charset=utf-8');
         }
     }
 
