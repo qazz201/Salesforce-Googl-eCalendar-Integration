@@ -2,7 +2,7 @@
  * Created by Vladyslav Kravchuk on 6/22/2021.
  */
 
-public inherited sharing class CalloutClient {
+public with sharing class CalloutClient {
     private String endpoint;
     private Map<String, String> headers = new Map<String, String>();
     private HttpRequest request = new HttpRequest();
