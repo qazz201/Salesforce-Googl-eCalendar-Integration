@@ -28,11 +28,31 @@ public inherited sharing class CalloutClient {
     }
 
     public HttpResponse post() {
-        return this.execute('POST', null);
+        return this.post(null);
     }
 
     public HttpResponse post(Object requestBody) {
         return this.execute('POST', requestBody);
+    }
+
+    public HttpResponse put() {
+        return this.put(null);
+    }
+
+    public HttpResponse put(Object requestBody) {
+        return this.execute('PUT', requestBody);
+    }
+
+    public HttpResponse patch() {
+        return this.patch(null);
+    }
+
+    public HttpResponse patch(Object requestBody) {
+        return this.execute('PATCH', requestBody);
+    }
+
+    public HttpResponse del() {
+        return this.execute('DELETE', null);
     }
 
     private HttpResponse execute(String method, Object requestBody) {
@@ -49,7 +69,10 @@ public inherited sharing class CalloutClient {
         HttpResponse response = http.send(this.request);
 
         try {
-            if (response.getStatusCode() == 200) {
+            Integer statusCode = response.getStatusCode();
+
+            if (statusCode == 200 || statusCode == 204) {
+                System.debug('Resource updated/deleted successfully. Current method is: ' + method);
                 return response;
             } else {
                 String errorMessage = 'Unexpected Error while communicating with Google Calendar API. '
@@ -87,6 +110,8 @@ public inherited sharing class CalloutClient {
         if (requestBody instanceOf Blob) {
             this.request.setBodyAsBlob((Blob) requestBody);
             // this.setHeader('Content-Type', 'multipart/form-data; charset=utf-8');
+        } else if (requestBody instanceOf String) {
+            this.request.setBody((String) requestBody);
         } else {
             this.request.setBody(Json.serialize(requestBody));
             // this.setHeader('Content-Type', 'application/json; charset=utf-8');
