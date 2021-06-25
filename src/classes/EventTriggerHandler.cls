@@ -18,7 +18,6 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
         this.publishPlatformEvent(platformEventTypes.Event_Delete__c);
     }
 
-
     private void publishPlatformEvent(String eventType) {
         List<Google_Calendar_Platform_Event__e> platformEvents = new List<Google_Calendar_Platform_Event__e>();
 
@@ -44,8 +43,11 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
 
         if (!eventType.isEmpty()) {
             return eventType[0];
+        } else {
+            throw new EventTriggerHandlerException('No Active Google_Platform_Event_Type__mdt has been found');
         }
+    }
 
-        return null;
+    public class EventTriggerHandlerException extends Exception {
     }
 }

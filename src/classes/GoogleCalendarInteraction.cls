@@ -29,7 +29,7 @@ public with sharing class GoogleCalendarInteraction {
 
     @Future(callout=true)
     public static void executeCallout(String eventBody, String operationType, String googleEventId) {
-        System.debug('OPERATION == ' + operationType + '_PLATFORM EVENTS TYPE_' + platformEventTypes);
+        System.debug('OPERATION == ' + operationType + '; _PLATFORM EVENTS TYPE_=' + platformEventTypes);
         System.debug('GOOGLE EVENT ID= ' + googleEventId);
 
         SalesforceEvent ev = (SalesforceEvent) JSON.deserialize(eventBody, SalesforceEvent.class);
@@ -46,6 +46,11 @@ public with sharing class GoogleCalendarInteraction {
                     '  }' +
                     '}');
 
+            if (httpResponse.getStatusCode() == 200) {
+                GoogleResponse googleParseResp = (GoogleResponse) JSON.deserialize(httpResponse.getBody(), GoogleResponse.class);
+                createSalesforceGoogleEventAssociation(ev.Id, googleParseResp.Id);
+            }
+
         } else if (operationType == platformEventTypes.Event_Update__c) {
             if (googleEventId == null) throw new GoogleCalendarInteractionException('You must provide Google event Id');
 
@@ -58,29 +63,13 @@ public with sharing class GoogleCalendarInteraction {
                     '    "dateTime":"' + ev.EndDateTime + '"' +
                     '  }' +
                     '}');
+            System.debug('RESPONSE STATUS IS ' + httpResponse.getStatusCode());
         } else if (operationType == platformEventTypes.Event_Delete__c) {
 
         } else {
 
         }
-
-
-//        HttpResponse resp = new CalendarApi('201qazz@gmail.com').insertEvent('{' +
-//                '"summary":"' + ev.Subject + '",' +
-//                ' "start": {' +
-//                '    "dateTime":"' + ev.StartDateTime + '"' +
-//                '  },' +
-//                '  "end": {' +
-//                '    "dateTime":"' + ev.EndDateTime + '"' +
-//                '  }' +
-//                '}');
-//        System.debug('GOOOOOOOOOOOGLE' + resp.getBody());
-//
-        if (httpResponse.getStatusCode() == 200) {
-            GoogleResponse googleParseResp = (GoogleResponse) JSON.deserialize(httpResponse.getBody(), GoogleResponse.class);
-            System.debug('200000000000 ID=' + googleParseResp.Id);
-            createSalesforceGoogleEventAssociation(ev.Id, googleParseResp.Id);
-        }
+        System.debug('RESPONSE BODY:__' + httpResponse.getBody());
     }
 
 
