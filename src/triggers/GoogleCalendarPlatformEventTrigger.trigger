@@ -3,5 +3,5 @@
  */
 
 trigger GoogleCalendarPlatformEventTrigger on Google_Calendar_Platform_Event__e (after insert) {
-
+    new GoogleCalPlatformEventTriggerHandler().execute();
 }

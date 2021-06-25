@@ -56,7 +56,6 @@ public with sharing class CalloutClient {
     }
 
     private HttpResponse execute(String method, Object requestBody) {
-        Http http = new Http();
 
         this.setMethod(method);
         this.setEndpoint();
@@ -66,7 +65,7 @@ public with sharing class CalloutClient {
             this.setBody(requestBody);
         }
 
-        HttpResponse response = http.send(this.request);
+        HttpResponse response = new Http().send(this.request);
 
         try {
             Integer statusCode = response.getStatusCode();
