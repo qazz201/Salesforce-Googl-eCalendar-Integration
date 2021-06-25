@@ -54,7 +54,7 @@ public with sharing class GoogleCalendarInteraction {
         } else if (operationType == platformEventTypes.Event_Update__c) {
             if (googleEventId == null) throw new GoogleCalendarInteractionException('You must provide Google event Id');
 
-            httpResponse = new CalendarApi('201qazz@gmail.com').updateEventPATCH(googleEventId, '{' +
+            httpResponse = new CalendarApi('201qazz@gmail.com').updateEventPUT(googleEventId, '{' +
                     '"summary":"' + ev.Subject + '",' +
                     ' "start": {' +
                     '    "dateTime":"' + ev.StartDateTime + '"' +
@@ -69,9 +69,9 @@ public with sharing class GoogleCalendarInteraction {
         } else {
 
         }
+
         System.debug('RESPONSE BODY:__' + httpResponse.getBody());
     }
-
 
     /////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////////////
     private static void createSalesforceGoogleEventAssociation(String salesforceEventId, String googleEventId) {
