@@ -5,7 +5,7 @@
 public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHandler {
 
     public override void afterInsert() {
-        Google_Platform_Event_Type__mdt platformEventTypes = getGooglePlatformEventTypes();
+        Google_Platform_Event_Type__mdt platformEventTypes = this.getGooglePlatformEventTypes();
         Map<Id, Event> salesforceEvents = this.getSalesforceEvents();
 
         if (platformEventTypes != null) {
