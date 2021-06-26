@@ -33,18 +33,17 @@ public with sharing class GoogleCalendarInteraction {
         System.debug('GOOGLE EVENT ID= ' + googleEventId);
 
         SalesforceEvent ev = (SalesforceEvent) JSON.deserialize(eventBody, SalesforceEvent.class);
+        String requestBody = new GoogleCalendarEventBodyGenerator(
+                ev.Subject,
+                ev.StartDateTime,
+                ev.EndDateTime,
+                ev.Description
+        ).toJSON();
+
         HttpResponse httpResponse = new HttpResponse();
 
         if (operationType == platformEventTypes.Event_Insert__c) {
-            httpResponse = new CalendarApi('201qazz@gmail.com').insertEvent('{' +
-                    '"summary":"' + ev.Subject + '",' +
-                    ' "start": {' +
-                    '    "dateTime":"' + ev.StartDateTime + '"' +
-                    '  },' +
-                    '  "end": {' +
-                    '    "dateTime":"' + ev.EndDateTime + '"' +
-                    '  }' +
-                    '}');
+            httpResponse = new CalendarApi('201qazz@gmail.com').insertEvent(requestBody);
 
             if (httpResponse.getStatusCode() == 200) {
                 GoogleResponse googleParseResp = (GoogleResponse) JSON.deserialize(httpResponse.getBody(), GoogleResponse.class);
@@ -54,22 +53,15 @@ public with sharing class GoogleCalendarInteraction {
         } else if (operationType == platformEventTypes.Event_Update__c) {
             if (googleEventId == null) throw new GoogleCalendarInteractionException('You must provide Google event Id');
 
-            httpResponse = new CalendarApi('201qazz@gmail.com').updateEventPUT(googleEventId, '{' +
-                    '"summary":"' + ev.Subject + '",' +
-                    ' "start": {' +
-                    '    "dateTime":"' + ev.StartDateTime + '"' +
-                    '  },' +
-                    '  "end": {' +
-                    '    "dateTime":"' + ev.EndDateTime + '"' +
-                    '  }' +
-                    '}');
-            System.debug('RESPONSE STATUS IS ' + httpResponse.getStatusCode());
+            httpResponse = new CalendarApi('201qazz@gmail.com').updateEventPUT(googleEventId, requestBody);
+
         } else if (operationType == platformEventTypes.Event_Delete__c) {
 
         } else {
 
         }
 
+        System.debug('RESPONSE STATUS IS ' + httpResponse.getStatusCode());
         System.debug('RESPONSE BODY:__' + httpResponse.getBody());
     }
 
@@ -105,11 +97,13 @@ public with sharing class GoogleCalendarInteraction {
         return null;
     }
 
+
     public class SalesforceEvent {
         public String Id;
         public String Subject;
         public String StartDateTime;
         public String EndDateTime;
+        public String Description;
     }
 
     public class GoogleResponse {

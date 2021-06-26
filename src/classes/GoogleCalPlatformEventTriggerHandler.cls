@@ -48,7 +48,8 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
                 SELECT Id,
                         Subject,
                         StartDateTime,
-                        EndDateTime
+                        EndDateTime,
+                        Description
                 FROM Event
                 WHERE Id IN :eventsId
         ]);
