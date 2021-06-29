@@ -10,7 +10,7 @@ public with sharing class CalendarApi {
     private static final String EVENTS = 'events';
     private static final String EVENTS_CHANGE = 'eventsChange';
 
-    private static final Map<String, String> apiEndpoints = new Map<String, String>{
+    private static final Map<String, String> apiPath = new Map<String, String>{
             CALENDAR => '/users/me/calendarList',
             EVENTS => '/calendars/{0}/events', // {0} - calendarId (GET,POST)
             EVENTS_CHANGE => '/calendars/{0}/events/{1}' //{0} - calendarId; {1} -eventId (DELETE,PUT)
@@ -25,7 +25,7 @@ public with sharing class CalendarApi {
 
     //////////// GET ////////////////////////////////////////
     public HttpResponse getCalendarList() {
-        return new CalloutClient(CALLOUT + apiEndpoints.get(CALENDAR)).get();
+        return new CalloutClient(CALLOUT + apiPath.get(CALENDAR)).get();
     }
 
     public HttpResponse getEventList() {
@@ -82,7 +82,7 @@ public with sharing class CalendarApi {
     }
 
     private String getEndpointByName(String endpointName) {
-        String endpoint = apiEndpoints.get(endpointName);
+        String endpoint = apiPath.get(endpointName);
 
         if (endpoint == null) {
             throw new CalendarApiException('No such endpointName ' + endpointName);

@@ -11,17 +11,17 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
         if (platformEventTypes != null) {
             for (Google_Calendar_Platform_Event__e ple : (List <Google_Calendar_Platform_Event__e>) Trigger.new) {
 
-                String eventType = ple.Event_Type__c;
+                String eventType = ple.Event_Type__c; // INSERT,UPDATE,DELETE
                 Event event = salesforceEvents.get(ple.Salesforce_Event_Id__c);
 
                 if (eventType == platformEventTypes.Event_Insert__c) {
-                    GoogleCalendarInteraction.insertEvent(event);
+                    GoogleCalendarCalloutService.insertEvent(event);
 
                 } else if (eventType == platformEventTypes.Event_Update__c) {
-                    GoogleCalendarInteraction.updateEvent(event);
+                    GoogleCalendarCalloutService.updateEvent(event);
 
                 } else if (eventType == platformEventTypes.Event_Delete__c) {
-                    GoogleCalendarInteraction.deleteEvent(event);
+                    GoogleCalendarCalloutService.deleteEvent(event);
 
                 } else {
                     String errorMsg = 'ERROR: Choose appropriate platform event type: INSERT,UPDATE,DELETE. Current is' + ple.Event_Type__c;

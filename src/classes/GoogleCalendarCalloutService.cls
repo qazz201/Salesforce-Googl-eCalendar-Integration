@@ -2,7 +2,7 @@
  * Created by Vladyslav Kravchuk on 6/25/2021.
  */
 
-public with sharing class GoogleCalendarInteraction {
+public with sharing class GoogleCalendarCalloutService {
     private static Google_Platform_Event_Type__mdt platformEventTypes;
 
     static {
@@ -46,8 +46,8 @@ public with sharing class GoogleCalendarInteraction {
             httpResponse = new CalendarApi('201qazz@gmail.com').insertEvent(requestBody);
 
             if (httpResponse.getStatusCode() == 200) {
-                GoogleResponse googleParseResp = (GoogleResponse) JSON.deserialize(httpResponse.getBody(), GoogleResponse.class);
-                createSalesforceGoogleEventAssociation(ev.Id, googleParseResp.Id);
+                GoogleResponse googleCalendarEvent = (GoogleResponse) JSON.deserialize(httpResponse.getBody(), GoogleResponse.class);
+                createSalesforceGoogleEventAssociation(ev.Id, googleCalendarEvent.Id);
             }
 
         } else if (operationType == platformEventTypes.Event_Update__c) {
