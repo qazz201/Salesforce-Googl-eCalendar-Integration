@@ -41,9 +41,10 @@ public with sharing class GoogleCalendarCalloutService {
         ).toJSON();
 
         HttpResponse httpResponse = new HttpResponse();
+        CalendarApi calendarApi = new CalendarApi('201qazz@gmail.com');
 
         if (operationType == platformEventTypes.Event_Insert__c) {
-            httpResponse = new CalendarApi('201qazz@gmail.com').insertEvent(requestBody);
+            httpResponse = calendarApi.insertEvent(requestBody);
 
             if (httpResponse.getStatusCode() == 200) {
                 GoogleResponse googleCalendarEvent = (GoogleResponse) JSON.deserialize(httpResponse.getBody(), GoogleResponse.class);
@@ -53,7 +54,7 @@ public with sharing class GoogleCalendarCalloutService {
         } else if (operationType == platformEventTypes.Event_Update__c) {
             if (googleEventId == null) throw new GoogleCalendarInteractionException('You must provide Google event Id');
 
-            httpResponse = new CalendarApi('201qazz@gmail.com').updateEventPUT(googleEventId, requestBody);
+            httpResponse = calendarApi.updateEventPUT(googleEventId, requestBody);
 
         } else if (operationType == platformEventTypes.Event_Delete__c) {
 
