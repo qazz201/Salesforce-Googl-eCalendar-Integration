@@ -4,7 +4,7 @@
 
 public with sharing class GoogleCalendarCalloutService implements Queueable, Database.AllowsCallouts {
     private CalendarApi calendarApi = new CalendarApi('201qazz@gmail.com');
-    private List<Google_Calendar_Event__c> googleEventsToInsert = new List<Google_Calendar_Event__c>();
+    private List<Event> salesforceEventsToUpdate = new List<Event>();
     private List<GoogleCalPlatformEventTriggerHandler.EventOperation> platformEvents;
 
     public GoogleCalendarCalloutService(List<GoogleCalPlatformEventTriggerHandler.EventOperation> platformEvents) {
@@ -13,13 +13,14 @@ public with sharing class GoogleCalendarCalloutService implements Queueable, Dat
 
     public void execute(QueueableContext context) {
         for (GoogleCalPlatformEventTriggerHandler.EventOperation ple : platformEvents) {
-            this.executeCallout(ple.event, ple.operationType);
+            this.executeCallout(ple.event, ple.operationType, ple.googleEventId);
         }
 
-        insert googleEventsToInsert;
+        if (!salesforceEventsToUpdate.isEmpty()) upsert salesforceEventsToUpdate;
+        System.debug('GoogleCalendarCalloutService => salesforceEventsToUpdate= ' + salesforceEventsToUpdate);
     }
 
-    private void executeCallout(Event event, String operationType) {
+    private void executeCallout(Event event, String operationType, String googleEventId) {
         HttpResponse httpResponse = new HttpResponse();
         String requestBody = new GoogleCalendarEventBodyGenerator(
                 event.Subject,
@@ -32,7 +33,7 @@ public with sharing class GoogleCalendarCalloutService implements Queueable, Dat
             httpResponse = insertEvent(event, requestBody);
 
         } else if (operationType == PlatformEventTypes.UPDATE_TYPE) {
-            httpResponse = updateEvent(event, requestBody);
+            httpResponse = updateEvent(event, requestBody, googleEventId);
 
         } else if (operationType == PlatformEventTypes.DELETE_TYPE) {
 
@@ -50,15 +51,14 @@ public with sharing class GoogleCalendarCalloutService implements Queueable, Dat
 
         if (httpResponse.getStatusCode() == 200) {
             GoogleResponse googleCalendarEvent = (GoogleResponse) JSON.deserialize(httpResponse.getBody(), GoogleResponse.class);
-            createSalesforceGoogleEventAssociation(salesforceEvent.Id, googleCalendarEvent.Id);
+            createSalesforceGoogleEventAssociation(salesforceEvent, googleCalendarEvent.Id);
         }
 
         return httpResponse;
     }
 
     /////////////// UPDATE /////////////////////////////////////////////////////////////////////////////////////////////
-    private HttpResponse updateEvent(Event salesforceEvent, String requestBody) {
-        String googleEventId = getGoogleEventIdBySalesforceEventId(salesforceEvent.Id);
+    private HttpResponse updateEvent(Event salesforceEvent, String requestBody, String googleEventId) {
         HttpResponse httpResponse = new HttpResponse();
 
         if (googleEventId == null) {
@@ -72,25 +72,9 @@ public with sharing class GoogleCalendarCalloutService implements Queueable, Dat
 
 
     /////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////////////
-    private void createSalesforceGoogleEventAssociation(String salesforceEventId, String googleEventId) {
-        googleEventsToInsert.add(new Google_Calendar_Event__c(
-                Salesforce_Event_Id__c = salesforceEventId,
-                Google_Event_Id__c = googleEventId
-        ));
-    }
-
-    private static String getGoogleEventIdBySalesforceEventId(String salesforceEventId) {
-        List<Google_Calendar_Event__c> googleCalendarEvents = [
-                SELECT
-                        Id,
-                        Salesforce_Event_Id__c,
-                        Google_Event_Id__c
-                from Google_Calendar_Event__c
-                WHERE Salesforce_Event_Id__c = :salesforceEventId
-        ];
-
-        if (!googleCalendarEvents.isEmpty()) return googleCalendarEvents[0].Google_Event_Id__c;
-        return null;
+    private void createSalesforceGoogleEventAssociation(Event salesforceEvent, String googleEventId) {
+        salesforceEvent.Google_Event_Id__c = googleEventId;
+        salesforceEventsToUpdate.add(salesforceEvent);
     }
 
     public class GoogleResponse {

@@ -12,8 +12,9 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
         for (Google_Calendar_Platform_Event__e ple : (List<Google_Calendar_Platform_Event__e>) Trigger.new) {
             Event event = eventByIds.get(ple.Salesforce_Event_Id__c);
             String operationType = ple.Operation_Type__c;
+            String googleEventId = ple.Google_Event_Id__c;
 
-            eventOperations.add(new EventOperation(event, operationType));
+            eventOperations.add(new EventOperation(event, operationType, googleEventId));
         }
 
         System.enqueueJob(new GoogleCalendarCalloutService(eventOperations));
@@ -49,10 +50,12 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
     public class EventOperation {
         public Event event;
         public String operationType;
+        public String googleEventId;
 
-        public EventOperation(Event event, String operationType) {
+        public EventOperation(Event event, String operationType, String googleEventId) {
             this.event = event;
             this.operationType = operationType;
+            this.googleEventId = googleEventId;
         }
     }
 
