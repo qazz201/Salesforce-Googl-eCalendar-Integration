@@ -3,18 +3,20 @@
  */
 
 public with sharing class EventTriggerHandler extends TriggerHandler {
+    Google_Platform_Event_Type__mdt platformEventTypes;
+
+    {
+        platformEventTypes = getGooglePlatformEventTypes();
+    }
     public override void afterInsert() {
-        Google_Platform_Event_Type__mdt platformEventTypes = getGooglePlatformEventTypes();
         this.publishPlatformEvent(platformEventTypes.Event_Insert__c);
     }
 
     public override void afterUpdate() {
-        Google_Platform_Event_Type__mdt platformEventTypes = getGooglePlatformEventTypes();
         this.publishPlatformEvent(platformEventTypes.Event_Update__c);
     }
 
     public override void afterDelete() {
-        Google_Platform_Event_Type__mdt platformEventTypes = getGooglePlatformEventTypes();
         this.publishPlatformEvent(platformEventTypes.Event_Delete__c);
     }
 
