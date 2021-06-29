@@ -5,31 +5,18 @@
 public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHandler {
 
     public override void afterInsert() {
-        Google_Platform_Event_Type__mdt platformEventTypes = this.getGooglePlatformEventTypes();
-        Map<Id, Event> salesforceEvents = this.getSalesforceEvents();
 
-        if (platformEventTypes != null) {
-            for (Google_Calendar_Platform_Event__e ple : (List <Google_Calendar_Platform_Event__e>) Trigger.new) {
+        Map<Id, Event> eventByIds = this.getEventByIds();
+        List<EventOperation> eventOperations = new List<EventOperation>();
 
-                String eventType = ple.Event_Type__c; // INSERT,UPDATE,DELETE
-                Event event = salesforceEvents.get(ple.Salesforce_Event_Id__c);
+        for (Google_Calendar_Platform_Event__e ple : (List<Google_Calendar_Platform_Event__e>) Trigger.new) {
+            Event event = eventByIds.get(ple.Salesforce_Event_Id__c);
+            String operationType = ple.Operation_Type__c;
 
-                if (eventType == platformEventTypes.Event_Insert__c) {
-                    GoogleCalendarCalloutService.insertEvent(event);
-
-                } else if (eventType == platformEventTypes.Event_Update__c) {
-                    GoogleCalendarCalloutService.updateEvent(event);
-
-                } else if (eventType == platformEventTypes.Event_Delete__c) {
-                    GoogleCalendarCalloutService.deleteEvent(event);
-
-                } else {
-                    String errorMsg = 'ERROR: Choose appropriate platform event type: INSERT,UPDATE,DELETE. Current is' + ple.Event_Type__c;
-                    System.debug(errorMsg);
-                    throw new GoogleCalPlatformEventTriggerHandlerException(errorMsg);
-                }
-            }
+            eventOperations.add(new EventOperation(event, operationType));
         }
+
+        System.enqueueJob(new GoogleCalendarCalloutService(eventOperations));
     }
 
     /////////////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////
@@ -37,7 +24,7 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
      *  Get salesforce events from platform event
      * @return
      */
-    private Map<Id, Event> getSalesforceEvents() {
+    private Map<Id, Event> getEventByIds() {
         List<Id> eventsId = new List<Id>();
 
         for (Google_Calendar_Platform_Event__e ple : (List <Google_Calendar_Platform_Event__e>) Trigger.new) {
@@ -59,21 +46,14 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
         return null;
     }
 
-    private Google_Platform_Event_Type__mdt getGooglePlatformEventTypes() {
-        List<Google_Platform_Event_Type__mdt> eventType = [
-                SELECT Is_Active__c,
-                        Event_Insert__c,
-                        Event_Update__c,
-                        Event_Delete__c
-                FROM Google_Platform_Event_Type__mdt
-                WHERE Is_Active__c = TRUE
-        ];
+    public class EventOperation {
+        public Event event;
+        public String operationType;
 
-        if (!eventType.isEmpty()) {
-            return eventType[0];
+        public EventOperation(Event event, String operationType) {
+            this.event = event;
+            this.operationType = operationType;
         }
-
-        return null;
     }
 
     public class GoogleCalPlatformEventTriggerHandlerException extends Exception {

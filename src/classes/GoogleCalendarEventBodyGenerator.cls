@@ -4,15 +4,15 @@
 
 public with sharing class GoogleCalendarEventBodyGenerator {
     private String subject;
-    private String startDateTime;
-    private String endDateTime;
+    private Datetime startDateTime;
+    private Datetime endDateTime;
     private String description;
 
     // System reserved words
     private static final String reservedDateTime = 'dateTime';
     private static final String reservedEnd = 'end';
 
-    public GoogleCalendarEventBodyGenerator(String subject, String startDateTime, String endDateTime, String description) {
+    public GoogleCalendarEventBodyGenerator(String subject, Datetime startDateTime, Datetime endDateTime, String description) {
         this.subject = subject;
         this.startDateTime = startDateTime;
         this.endDateTime = endDateTime;
@@ -45,6 +45,6 @@ public with sharing class GoogleCalendarEventBodyGenerator {
     }
 
     public class DateTimeFormatting {
-        public String dateTimes;
+        public Datetime dateTimes;
     }
 }

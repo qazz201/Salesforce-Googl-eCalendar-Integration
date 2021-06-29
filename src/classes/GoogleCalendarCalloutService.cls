@@ -2,61 +2,39 @@
  * Created by Vladyslav Kravchuk on 6/25/2021.
  */
 
-public with sharing class GoogleCalendarCalloutService {
-    private static Google_Platform_Event_Type__mdt platformEventTypes;
+public with sharing class GoogleCalendarCalloutService implements Queueable, Database.AllowsCallouts {
+    private CalendarApi calendarApi = new CalendarApi('201qazz@gmail.com');
+    private List<Google_Calendar_Event__c> googleEventsToInsert = new List<Google_Calendar_Event__c>();
+    private List<GoogleCalPlatformEventTriggerHandler.EventOperation> platformEvents;
 
-    static {
-        platformEventTypes = getGooglePlatformEventTypes();
+    public GoogleCalendarCalloutService(List<GoogleCalPlatformEventTriggerHandler.EventOperation> platformEvents) {
+        this.platformEvents = platformEvents;
     }
 
-    public static void insertEvent(Event salesforceEvent) {
-        executeCallout(JSON.serialize(salesforceEvent), platformEventTypes.Event_Insert__c, null);
-    }
-
-    public static void updateEvent(Event salesforceEvent) {
-        String googleEventId = getGoogleEventIdBySalesforceEventId(salesforceEvent.Id);
-
-        if (googleEventId != null) {
-            executeCallout(JSON.serialize(salesforceEvent), platformEventTypes.Event_Update__c, googleEventId);
-        } else {
-            insertEvent(salesforceEvent);
+    public void execute(QueueableContext context) {
+        for (GoogleCalPlatformEventTriggerHandler.EventOperation ple : platformEvents) {
+            this.executeCallout(ple.event, ple.operationType);
         }
+
+        insert googleEventsToInsert;
     }
 
-    public static void deleteEvent(Event salesforceEvent) {
-        executeCallout(JSON.serialize(salesforceEvent), platformEventTypes.Event_Delete__c, null);
-    }
-
-    @Future(callout=true)
-    public static void executeCallout(String eventBody, String operationType, String googleEventId) {
-        System.debug('OPERATION == ' + operationType + '; _PLATFORM EVENTS TYPE_=' + platformEventTypes);
-        System.debug('GOOGLE EVENT ID= ' + googleEventId);
-
-        SalesforceEvent ev = (SalesforceEvent) JSON.deserialize(eventBody, SalesforceEvent.class);
+    private void executeCallout(Event event, String operationType) {
+        HttpResponse httpResponse = new HttpResponse();
         String requestBody = new GoogleCalendarEventBodyGenerator(
-                ev.Subject,
-                ev.StartDateTime,
-                ev.EndDateTime,
-                ev.Description
+                event.Subject,
+                event.StartDateTime,
+                event.EndDateTime,
+                event.Description
         ).toJSON();
 
-        HttpResponse httpResponse = new HttpResponse();
-        CalendarApi calendarApi = new CalendarApi('201qazz@gmail.com');
+        if (operationType == PlatformEventTypes.INSERT_TYPE) {
+            httpResponse = insertEvent(event, requestBody);
 
-        if (operationType == platformEventTypes.Event_Insert__c) {
-            httpResponse = calendarApi.insertEvent(requestBody);
+        } else if (operationType == PlatformEventTypes.UPDATE_TYPE) {
+            httpResponse = updateEvent(event, requestBody);
 
-            if (httpResponse.getStatusCode() == 200) {
-                GoogleResponse googleCalendarEvent = (GoogleResponse) JSON.deserialize(httpResponse.getBody(), GoogleResponse.class);
-                createSalesforceGoogleEventAssociation(ev.Id, googleCalendarEvent.Id);
-            }
-
-        } else if (operationType == platformEventTypes.Event_Update__c) {
-            if (googleEventId == null) throw new GoogleCalendarInteractionException('You must provide Google event Id');
-
-            httpResponse = calendarApi.updateEventPUT(googleEventId, requestBody);
-
-        } else if (operationType == platformEventTypes.Event_Delete__c) {
+        } else if (operationType == PlatformEventTypes.DELETE_TYPE) {
 
         } else {
 
@@ -66,45 +44,53 @@ public with sharing class GoogleCalendarCalloutService {
         System.debug('RESPONSE BODY:__' + httpResponse.getBody());
     }
 
+    /////////////// INSERT /////////////////////////////////////////////////////////////////////////////////////////////
+    private HttpResponse insertEvent(Event salesforceEvent, String requestBody) {
+        HttpResponse httpResponse = calendarApi.insertEvent(requestBody);
+
+        if (httpResponse.getStatusCode() == 200) {
+            GoogleResponse googleCalendarEvent = (GoogleResponse) JSON.deserialize(httpResponse.getBody(), GoogleResponse.class);
+            createSalesforceGoogleEventAssociation(salesforceEvent.Id, googleCalendarEvent.Id);
+        }
+
+        return httpResponse;
+    }
+
+    /////////////// UPDATE /////////////////////////////////////////////////////////////////////////////////////////////
+    private HttpResponse updateEvent(Event salesforceEvent, String requestBody) {
+        String googleEventId = getGoogleEventIdBySalesforceEventId(salesforceEvent.Id);
+        HttpResponse httpResponse = new HttpResponse();
+
+        if (googleEventId == null) {
+            httpResponse = this.insertEvent(salesforceEvent, requestBody);
+        } else {
+            httpResponse = calendarApi.updateEventPUT(googleEventId, requestBody);
+        }
+
+        return httpResponse;
+    }
+
+
     /////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////////////
-    private static void createSalesforceGoogleEventAssociation(String salesforceEventId, String googleEventId) {
-        insert new Google_Calendar_Event__c(
+    private void createSalesforceGoogleEventAssociation(String salesforceEventId, String googleEventId) {
+        googleEventsToInsert.add(new Google_Calendar_Event__c(
                 Salesforce_Event_Id__c = salesforceEventId,
                 Google_Event_Id__c = googleEventId
-        );
+        ));
     }
 
     private static String getGoogleEventIdBySalesforceEventId(String salesforceEventId) {
-        List<Google_Calendar_Event__c> googleCalendarEvents = [SELECT Id,Salesforce_Event_Id__c,Google_Event_Id__c from Google_Calendar_Event__c WHERE Salesforce_Event_Id__c = :salesforceEventId];
+        List<Google_Calendar_Event__c> googleCalendarEvents = [
+                SELECT
+                        Id,
+                        Salesforce_Event_Id__c,
+                        Google_Event_Id__c
+                from Google_Calendar_Event__c
+                WHERE Salesforce_Event_Id__c = :salesforceEventId
+        ];
 
         if (!googleCalendarEvents.isEmpty()) return googleCalendarEvents[0].Google_Event_Id__c;
         return null;
-    }
-
-    private static Google_Platform_Event_Type__mdt getGooglePlatformEventTypes() {
-        List<Google_Platform_Event_Type__mdt> eventType = [
-                SELECT Is_Active__c,
-                        Event_Insert__c,
-                        Event_Update__c,
-                        Event_Delete__c
-                FROM Google_Platform_Event_Type__mdt
-                WHERE Is_Active__c = TRUE
-        ];
-
-        if (!eventType.isEmpty()) {
-            return eventType[0];
-        }
-
-        return null;
-    }
-
-
-    public class SalesforceEvent {
-        public String Id;
-        public String Subject;
-        public String StartDateTime;
-        public String EndDateTime;
-        public String Description;
     }
 
     public class GoogleResponse {

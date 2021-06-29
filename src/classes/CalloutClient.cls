@@ -77,7 +77,7 @@ public with sharing class CalloutClient {
                 String errorMessage = 'Unexpected Error while communicating with Google Calendar API. '
                         + 'Status ' + response.getStatus() + ' and Status Code ' + response.getStatusCode();
 
-                System.debug(errorMessage);
+                System.debug(errorMessage + response.getBody());
             }
         } catch (System.Exception e) {
             System.debug('#### Exception Executed ' + e.getStackTraceString() + '  ' + e.getMessage());
@@ -103,8 +103,6 @@ public with sharing class CalloutClient {
 
     private void setBody(Object requestBody) {
         if (requestBody == null) return;
-
-        System.debug(requestBody instanceof String);
 
         if (requestBody instanceOf Blob) {
             this.request.setBodyAsBlob((Blob) requestBody);
