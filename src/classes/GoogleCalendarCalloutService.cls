@@ -17,28 +17,40 @@ public with sharing class GoogleCalendarCalloutService implements Queueable, Dat
         }
 
         if (!salesforceEventsToUpdate.isEmpty()) upsert salesforceEventsToUpdate;
+
         System.debug('GoogleCalendarCalloutService => salesforceEventsToUpdate= ' + salesforceEventsToUpdate);
     }
 
     private void executeCallout(Event event, String operationType, String googleEventId) {
         HttpResponse httpResponse = new HttpResponse();
-        String requestBody = new GoogleCalendarEventBodyGenerator(
-                event.Subject,
-                event.StartDateTime,
-                event.EndDateTime,
-                event.Description
-        ).toJSON();
+        String requestBody;
 
-        if (operationType == PlatformEventTypes.INSERT_TYPE) {
-            httpResponse = insertEvent(event, requestBody);
+        // event=null- when operation is DELETE
+        if (event != null) {
+            requestBody = new GoogleCalendarEventBodyGenerator(
+                    event.Subject,
+                    event.StartDateTime,
+                    event.EndDateTime,
+                    event.Description
+            ).toJSON();
+        }
 
-        } else if (operationType == PlatformEventTypes.UPDATE_TYPE) {
-            httpResponse = updateEvent(event, requestBody, googleEventId);
+        try {
+            if (operationType == PlatformEventTypes.INSERT_TYPE) {
+                httpResponse = insertEvent(event, requestBody);
 
-        } else if (operationType == PlatformEventTypes.DELETE_TYPE) {
+            } else if (operationType == PlatformEventTypes.UPDATE_TYPE) {
+                httpResponse = updateEvent(event, requestBody, googleEventId);
 
-        } else {
+            } else if (operationType == PlatformEventTypes.DELETE_TYPE) {
+                httpResponse = deleteEvent(googleEventId);
 
+            } else {
+
+            }
+        } catch (System.Exception e) {
+            System.debug('#### Exception Executed ' + e.getStackTraceString() + '  ' + e.getMessage());
+            throw e;
         }
 
         System.debug('RESPONSE STATUS IS ' + httpResponse.getStatusCode());
@@ -70,6 +82,12 @@ public with sharing class GoogleCalendarCalloutService implements Queueable, Dat
         return httpResponse;
     }
 
+    /////////////// DELETE /////////////////////////////////////////////////////////////////////////////////////////////
+    private HttpResponse deleteEvent(String googleEventId) {
+        if (googleEventId == null) throw new GoogleCalendarInteractionException('Provide google calendar event id for operation DELETE');
+
+        return calendarApi.deleteEvent(googleEventId);
+    }
 
     /////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////////////
     private void createSalesforceGoogleEventAssociation(Event salesforceEvent, String googleEventId) {

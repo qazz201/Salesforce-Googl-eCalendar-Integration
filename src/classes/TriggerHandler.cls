@@ -4,8 +4,11 @@
 
 public abstract with sharing class TriggerHandler {
     private TriggerOperation context;
+    protected Boolean DISABLE_TRIGGER = false;
 
     public void execute() {
+        if (DISABLE_TRIGGER) return ;
+
         this.setContext();
 
         switch on context {

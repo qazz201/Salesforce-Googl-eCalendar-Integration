@@ -5,14 +5,16 @@
 public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHandler {
 
     public override void afterInsert() {
-
-        Map<Id, Event> eventByIds = this.getEventByIds();
         List<EventOperation> eventOperations = new List<EventOperation>();
+        Map<Id, Event> eventByIds = this.getEventByIds();
 
         for (Google_Calendar_Platform_Event__e ple : (List<Google_Calendar_Platform_Event__e>) Trigger.new) {
-            Event event = eventByIds.get(ple.Salesforce_Event_Id__c);
+            Event event;
             String operationType = ple.Operation_Type__c;
             String googleEventId = ple.Google_Event_Id__c;
+
+            // If operation DELETE- there is no Event can be found via SOQL
+            if (operationType != PlatformEventTypes.DELETE_TYPE) event = eventByIds.get(ple.Salesforce_Event_Id__c);
 
             eventOperations.add(new EventOperation(event, operationType, googleEventId));
         }
@@ -42,9 +44,7 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
                 WHERE Id IN :eventsId
         ]);
 
-        if (!events.isEmpty()) return events;
-
-        return null;
+        return events;
     }
 
     public class EventOperation {

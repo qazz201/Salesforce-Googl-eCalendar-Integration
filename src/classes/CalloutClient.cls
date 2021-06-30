@@ -78,6 +78,8 @@ public with sharing class CalloutClient {
                         + 'Status ' + response.getStatus() + ' and Status Code ' + response.getStatusCode();
 
                 System.debug(errorMessage + response.getBody());
+
+                throw new CalloutClientException(errorMessage);
             }
         } catch (System.Exception e) {
             System.debug('#### Exception Executed ' + e.getStackTraceString() + '  ' + e.getMessage());
@@ -113,6 +115,6 @@ public with sharing class CalloutClient {
         }
     }
 
-    public class CalloutApiException extends Exception {
+    public class CalloutClientException extends Exception {
     }
 }
