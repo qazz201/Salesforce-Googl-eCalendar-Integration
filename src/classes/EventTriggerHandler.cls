@@ -23,8 +23,9 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
     private void publishPlatformEvent() {
         List<Google_Calendar_Platform_Event__e> platformEvents = getPlatformEvents(operationType);
 
-        System.debug('PLATFORM EVENTS SIZE= ' + platformEvents.size() + ' EMPTY? ' + platformEvents.isEmpty() + ' Platform events: ' + platformEvents);
         if (!platformEvents.isEmpty()) EventBus.publish(platformEvents);
+
+        System.debug('PLATFORM EVENTS SIZE= ' + platformEvents.size() + ' EMPTY? ' + platformEvents.isEmpty() + ' Platform events: ' + platformEvents);
     }
 
     /////////////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////

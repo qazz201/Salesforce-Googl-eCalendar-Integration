@@ -4,11 +4,14 @@
 
 public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHandler {
 
+    //Limits.getHeapSize() >= Limits.getLimitHeapSize()
     public override void afterInsert() {
         List<EventOperation> eventOperations = new List<EventOperation>();
         Map<Id, Event> eventByIds = this.getEventByIds();
 
         for (Google_Calendar_Platform_Event__e ple : (List<Google_Calendar_Platform_Event__e>) Trigger.new) {
+            EventBus.TriggerContext.currentContext().setResumeCheckpoint(ple.replayId);
+
             Event event;
             String operationType = ple.Operation_Type__c;
             String googleEventId = ple.Google_Event_Id__c;
@@ -19,7 +22,15 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
             eventOperations.add(new EventOperation(event, operationType, googleEventId));
         }
 
-        System.enqueueJob(new GoogleCalendarCalloutService(eventOperations));
+        try {
+            System.enqueueJob(new GoogleCalendarCalloutService(eventOperations));
+        } catch (Exception e) {
+            // Only retry so many times, before giving up (thus avoid disabling the trigger)
+            if (EventBus.TriggerContext.currentContext().retries < 4) {
+                throw new EventBus.RetryableException(e.getMessage());
+            }
+        }
+
     }
 
     /////////////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////
