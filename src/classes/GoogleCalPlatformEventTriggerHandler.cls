@@ -17,7 +17,7 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
             String googleEventId = ple.Google_Event_Id__c;
 
             // If operation DELETE- there is no Event can be found via SOQL
-            if (operationType != PlatformEventTypes.DELETE_TYPE) event = eventByIds.get(ple.Salesforce_Event_Id__c);
+            if (!eventByIds.isEmpty()) event = eventByIds.get(ple.Salesforce_Event_Id__c);
 
             eventOperations.add(new EventOperation(event, operationType, googleEventId));
         }

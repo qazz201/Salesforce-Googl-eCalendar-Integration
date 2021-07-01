@@ -4,7 +4,7 @@
 
 public with sharing class CalendarApi {
     private String calendarId;
-    private static final String CALLOUT = 'callout:Google_Calendar';
+    private static final String ROOT_PATH = 'callout:Google_Calendar';
 
     private static final String CALENDAR = 'calendar';
     private static final String EVENTS = 'events';
@@ -25,7 +25,7 @@ public with sharing class CalendarApi {
 
     //////////// GET ////////////////////////////////////////
     public HttpResponse getCalendarList() {
-        return new CalloutClient(CALLOUT + apiPath.get(CALENDAR)).get();
+        return new CalloutClient(ROOT_PATH + apiPath.get(CALENDAR)).get();
     }
 
     public HttpResponse getEventList() {
@@ -37,8 +37,6 @@ public with sharing class CalendarApi {
     //@future(callout=true)
     public HttpResponse insertEvent(Object eventBody) {
         String endpoint = this.formatRequestEndpoint(EVENTS);
-
-        // JSON.serialize(new Map<String,Object>{'csrNumber'=>'csrNumber','intakeNumber'=>'intakeNumber','notificationRemarks'=>'notificationRemarks','inputContext'=>'inputContext'})
         return new CalloutClient(endpoint).post(eventBody);
     }
 
@@ -62,33 +60,33 @@ public with sharing class CalendarApi {
 
     //////////// UTILITY //////////////////////////////////////
     private String formatRequestEndpoint(String endpointName) {
-        String endpoint = this.getEndpointByName(endpointName);
+        String endpoint = this.getPathByName(endpointName);
 
         String formatEndpoint = String.format(endpoint, new List<String>{
                 this.calendarId
         });
 
-        return CALLOUT + formatEndpoint;
+        return ROOT_PATH + formatEndpoint;
     }
 
     private String formatRequestEndpoint(String endpointName, String eventId) {
-        String endpoint = this.getEndpointByName(endpointName);
+        String endpoint = this.getPathByName(endpointName);
 
         String formatEndpoint = String.format(endpoint, new List<String>{
                 this.calendarId, eventId
         });
 
-        return CALLOUT + formatEndpoint;
+        return ROOT_PATH + formatEndpoint;
     }
 
-    private String getEndpointByName(String endpointName) {
-        String endpoint = apiPath.get(endpointName);
+    private String getPathByName(String name) {
+        String path = apiPath.get(name);
 
-        if (endpoint == null) {
-            throw new CalendarApiException('No such endpointName ' + endpointName);
+        if (path == null) {
+            throw new CalendarApiException('No such path name: ' + name);
         }
 
-        return endpoint;
+        return path;
     }
 
     //////////// EXCEPTION ///////////////////////////////////////

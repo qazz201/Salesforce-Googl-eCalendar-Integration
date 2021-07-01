@@ -21,7 +21,7 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
     }
 
     private void publishPlatformEvent() {
-        List<Google_Calendar_Platform_Event__e> platformEvents = getPlatformEvents(operationType);
+        List<Google_Calendar_Platform_Event__e> platformEvents = collectPlatformEvents(operationType);
 
         if (!platformEvents.isEmpty()) EventBus.publish(platformEvents);
 
@@ -29,7 +29,7 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
     }
 
     /////////////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////
-    private List<Google_Calendar_Platform_Event__e> getPlatformEvents(String operationType) {
+    private List<Google_Calendar_Platform_Event__e> collectPlatformEvents(String operationType) {
         List<Google_Calendar_Platform_Event__e> platformEvents = new List<Google_Calendar_Platform_Event__e>();
         Map<Id, Event> oldEventsMap = (Map<Id, Event>) Trigger.oldMap;
         List<Event> triggerContext;
@@ -56,7 +56,7 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
         return platformEvents;
     }
 
-    // TODO: Change this logic ( run trigger logic if one of the fields is updated, else no run )
+    // TODO: Change this logic ( run trigger logic if one of the fields was updated )
     private Boolean allowPlatformEvents(Event newEvent, Map<Id, Event> oldEventsMap) {
         if (oldEventsMap == null) return true; // Creation of new record
 
