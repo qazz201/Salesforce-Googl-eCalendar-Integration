@@ -3,77 +3,84 @@
  */
 
 public with sharing class EventTriggerHandler extends TriggerHandler {
-    private String operationType;
 
     public override void afterInsert() {
-        this.operationType = PlatformEventTypes.INSERT_TYPE;
-        this.publishPlatformEvent();
+        List<Google_Calendar_Platform_Event__e> platformEvents = this.insertCollectingPlatformEvents(PlatformEventTypes.INSERT_TYPE);
+        this.publishPlatformEvent(platformEvents);
     }
 
     public override void afterUpdate() {
-        this.operationType = PlatformEventTypes.UPDATE_TYPE;
-        this.publishPlatformEvent();
+        List<Google_Calendar_Platform_Event__e> platformEvents = this.updateCollectingPlatformEvents(PlatformEventTypes.UPDATE_TYPE);
+        this.publishPlatformEvent(platformEvents);
     }
 
     public override void afterDelete() {
-        this.operationType = PlatformEventTypes.DELETE_TYPE;
-        this.publishPlatformEvent();
+        List<Google_Calendar_Platform_Event__e> platformEvents = this.deleteCollectingPlatformEvents(PlatformEventTypes.DELETE_TYPE);
+        this.publishPlatformEvent(platformEvents);
     }
 
-    private void publishPlatformEvent() {
-        List<Google_Calendar_Platform_Event__e> platformEvents = collectPlatformEvents(operationType);
-
+    private void publishPlatformEvent(List<Google_Calendar_Platform_Event__e> platformEvents) {
         if (!platformEvents.isEmpty()) EventBus.publish(platformEvents);
 
-        System.debug('PLATFORM EVENTS SIZE= ' + platformEvents.size() + ' EMPTY? ' + platformEvents.isEmpty() + ' Platform events: ' + platformEvents);
+        System.debug('PLATFORM EVENTS SIZE= ' + platformEvents.size() + ' Platform events: ' + platformEvents);
     }
 
     /////////////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////
-    private List<Google_Calendar_Platform_Event__e> collectPlatformEvents(String operationType) {
+    private List<Google_Calendar_Platform_Event__e> insertCollectingPlatformEvents(String operationType) {
         List<Google_Calendar_Platform_Event__e> platformEvents = new List<Google_Calendar_Platform_Event__e>();
-        Map<Id, Event> oldEventsMap = (Map<Id, Event>) Trigger.oldMap;
-        List<Event> triggerContext;
 
-        if (operationType == PlatformEventTypes.INSERT_TYPE || operationType == PlatformEventTypes.UPDATE_TYPE) {
-            triggerContext = (List<Event>) Trigger.new;
-        } else if (operationType == PlatformEventTypes.DELETE_TYPE) {
-            triggerContext = (List<Event>) Trigger.old;
+        for (Event event : (List<Event>) Trigger.new) {
+            Google_Calendar_Platform_Event__e platformEvent = createPlatformEventObj(event, operationType);
+            platformEvents.add(platformEvent);
+
+            System.debug('Operation is: ' + operationType);
         }
 
-        for (Event event : triggerContext) {
-            Boolean allowPlatformEvent = allowPlatformEvent(event, oldEventsMap);
-            System.debug('Allow Platform Events? ' + allowPlatformEvent + ' Operation is: ' + operationType);
-
-            // TODO: Change this logic
-            if (allowPlatformEvent) {
-                platformEvents.add(new Google_Calendar_Platform_Event__e(
-                        Salesforce_Event_Id__c = event.Id,
-                        Google_Event_Id__c = event.Google_Event_Id__c,
-                        Operation_Type__c = operationType)
-                );
-            }
-        }
         return platformEvents;
     }
 
-    // TODO: Change this logic ( run trigger logic if one of the fields was updated )
-    private Boolean allowPlatformEvent(Event newEvent, Map<Id, Event> oldEventsMap) {
-        if (oldEventsMap == null) return true; // Creation of new record
+    private List<Google_Calendar_Platform_Event__e> updateCollectingPlatformEvents(String operationType) {
+        List<Google_Calendar_Platform_Event__e> platformEvents = new List<Google_Calendar_Platform_Event__e>();
+        Map<Id, Event> oldEventsMap = (Map<Id, Event>) Trigger.oldMap;
 
-        Event oldEvent = oldEventsMap.get(newEvent.Id);
+        for (Event event : (List<Event>) Trigger.new) {
+            Event oldEvent = oldEventsMap.get(event.Id);
 
-        // Allow trigger run if the operation is DELETE or
-        // if one of the fields has been changed
-        if (newEvent.Subject != oldEvent.Subject
-                || newEvent.Description != oldEvent.Description
-                || newEvent.StartDateTime != oldEvent.StartDateTime
-                || newEvent.EndDateTime != oldEvent.EndDateTime) {
-            return true;
-        } else if (operationType == PlatformEventTypes.DELETE_TYPE) {
-            if (newEvent.Google_Event_Id__c == null) return false; // The deleted event is not present in the google calendar
-            return true;
+            if (event.Subject != oldEvent.Subject
+                    || event.Description != oldEvent.Description
+                    || event.StartDateTime != oldEvent.StartDateTime
+                    || event.EndDateTime != oldEvent.EndDateTime) {
+
+                Google_Calendar_Platform_Event__e platformEvent = createPlatformEventObj(event, operationType);
+                platformEvents.add(platformEvent);
+
+                System.debug('Operation is: ' + operationType);
+            }
         }
-        return false;
+
+        return platformEvents;
+    }
+
+    private List<Google_Calendar_Platform_Event__e> deleteCollectingPlatformEvents(String operationType) {
+        List<Google_Calendar_Platform_Event__e> platformEvents = new List<Google_Calendar_Platform_Event__e>();
+
+        for (Event event : (List<Event>) Trigger.old) {
+            if (event.Google_Event_Id__c == null) continue; // The deleted event is not present in the google calendar
+
+            Google_Calendar_Platform_Event__e platformEvent = createPlatformEventObj(event, operationType);
+            platformEvents.add(platformEvent);
+
+            System.debug('Operation is: ' + operationType);
+        }
+
+        return platformEvents;
+    }
+
+    private Google_Calendar_Platform_Event__e createPlatformEventObj(Event event, String operationType) {
+        return new Google_Calendar_Platform_Event__e(
+                Salesforce_Event_JSON__c = JSON.serialize(event),
+                Google_Event_Id__c = event.Google_Event_Id__c,
+                Operation_Type__c = operationType);
     }
 
 ///////////////////// EXCEPTION ////////////////////////////////////////////////////////////////////////////////////

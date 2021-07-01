@@ -13,44 +13,46 @@ public with sharing class GoogleCalendarCalloutService implements Queueable, Dat
 
     public void execute(QueueableContext context) {
         for (GoogleCalPlatformEventTriggerHandler.EventOperation ple : platformEvents) {
-            this.executeCallout(ple.event, ple.operationType, ple.googleEventId);
+            this.executeCallout(ple.eventJSON, ple.operationType, ple.googleEventId);
         }
 
-        if (!salesforceEventsToUpdate.isEmpty()) upsert salesforceEventsToUpdate;
+        if (!salesforceEventsToUpdate.isEmpty()) Database.upsert(salesforceEventsToUpdate, false);
 
         System.debug('GoogleCalendarCalloutService => salesforceEventsToUpdate= ' + salesforceEventsToUpdate);
     }
 
-    private void executeCallout(Event event, String operationType, String googleEventId) {
+    private void executeCallout(String eventJSON, String operationType, String googleEventId) {
         HttpResponse httpResponse = new HttpResponse();
         String requestBody;
-
-        // event=null- when operation is DELETE
-        if (event != null) {
-            requestBody = new GoogleCalendarEventBodyGenerator(
-                    event.Subject,
-                    event.StartDateTime,
-                    event.EndDateTime,
-                    event.Description
-            ).toJSON();
-        }
+        EventDeserialize parsedEvent;
 
         try {
+            // event=null- when operation is DELETE
+            if (eventJSON != null) {
+                parsedEvent = (EventDeserialize) JSON.deserialize(eventJSON, EventDeserialize.class);
+
+                requestBody = new GoogleCalendarEventBodyGenerator(
+                        parsedEvent.Subject,
+                        parsedEvent.StartDateTime,
+                        parsedEvent.EndDateTime,
+                        parsedEvent.Description
+                ).toJSON();
+            }
+
             if (operationType == PlatformEventTypes.INSERT_TYPE) {
-                httpResponse = insertEvent(event, requestBody);
+                httpResponse = this.insertEvent(parsedEvent, requestBody);
 
             } else if (operationType == PlatformEventTypes.UPDATE_TYPE) {
-                httpResponse = updateEvent(event, requestBody, googleEventId);
+                httpResponse = this.updateEvent(parsedEvent, requestBody, googleEventId);
 
-            } else if (operationType == PlatformEventTypes.DELETE_TYPE) {
-                httpResponse = deleteEvent(googleEventId);
+            } else if (operationType == PlatformEventTypes.DELETE_TYPE && googleEventId != null) {
+                httpResponse = this.deleteEvent(googleEventId);
 
             } else {
 
             }
         } catch (System.Exception e) {
             System.debug('#### Exception Executed ' + e.getStackTraceString() + '  ' + e.getMessage());
-            throw e;
         }
 
         System.debug('RESPONSE STATUS IS ' + httpResponse.getStatusCode());
@@ -58,7 +60,7 @@ public with sharing class GoogleCalendarCalloutService implements Queueable, Dat
     }
 
     /////////////// INSERT /////////////////////////////////////////////////////////////////////////////////////////////
-    private HttpResponse insertEvent(Event salesforceEvent, String requestBody) {
+    private HttpResponse insertEvent(EventDeserialize salesforceEvent, String requestBody) {
         HttpResponse httpResponse = calendarApi.insertEvent(requestBody);
 
         if (httpResponse.getStatusCode() == 200) {
@@ -70,7 +72,7 @@ public with sharing class GoogleCalendarCalloutService implements Queueable, Dat
     }
 
     /////////////// UPDATE /////////////////////////////////////////////////////////////////////////////////////////////
-    private HttpResponse updateEvent(Event salesforceEvent, String requestBody, String googleEventId) {
+    private HttpResponse updateEvent(EventDeserialize salesforceEvent, String requestBody, String googleEventId) {
         HttpResponse httpResponse = new HttpResponse();
 
         if (googleEventId == null) {
@@ -84,15 +86,20 @@ public with sharing class GoogleCalendarCalloutService implements Queueable, Dat
 
     /////////////// DELETE /////////////////////////////////////////////////////////////////////////////////////////////
     private HttpResponse deleteEvent(String googleEventId) {
-        if (googleEventId == null) throw new GoogleCalendarInteractionException('Provide google calendar event id for operation DELETE');
-
         return calendarApi.deleteEvent(googleEventId);
     }
 
     /////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////////////
-    private void createSalesforceGoogleEventAssociation(Event salesforceEvent, String googleEventId) {
-        salesforceEvent.Google_Event_Id__c = googleEventId;
-        salesforceEventsToUpdate.add(salesforceEvent);
+    private void createSalesforceGoogleEventAssociation(EventDeserialize salesforceEvent, String googleEventId) {
+        salesforceEventsToUpdate.add(new Event(Id = salesforceEvent.Id, Google_Event_Id__c = googleEventId));
+    }
+
+    public class EventDeserialize {
+        public String Id;
+        public String Subject;
+        public String StartDateTime;
+        public String EndDateTime;
+        public String Description;
     }
 
     public class GoogleResponse {

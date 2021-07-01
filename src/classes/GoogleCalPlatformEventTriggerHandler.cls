@@ -3,68 +3,48 @@
  */
 
 public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHandler {
+    private static final Integer calloutChunkSize = 100; // 150-max
 
     //Limits.getHeapSize() >= Limits.getLimitHeapSize()
     public override void afterInsert() {
         List<EventOperation> eventOperations = new List<EventOperation>();
-        Map<Id, Event> eventByIds = this.getEventByIds();
+        List<Google_Calendar_Platform_Event__e> chunkedPlatformEvents = this.getChunkedPlatformEvents();
 
-        for (Google_Calendar_Platform_Event__e ple : (List<Google_Calendar_Platform_Event__e>) Trigger.new) {
-            EventBus.TriggerContext.currentContext().setResumeCheckpoint(ple.replayId);
+        Google_Calendar_Platform_Event__e lastPlatformEventInChunk = chunkedPlatformEvents[chunkedPlatformEvents.size() - 1];
+        EventBus.TriggerContext.currentContext().setResumeCheckpoint(lastPlatformEventInChunk.replayId);
 
-            Event event;
+        for (Google_Calendar_Platform_Event__e ple : chunkedPlatformEvents) {
+            String event = ple.Salesforce_Event_JSON__c;
             String operationType = ple.Operation_Type__c;
             String googleEventId = ple.Google_Event_Id__c;
-
-            // If operation DELETE- there is no Event can be found via SOQL
-            if (!eventByIds.isEmpty()) event = eventByIds.get(ple.Salesforce_Event_Id__c);
 
             eventOperations.add(new EventOperation(event, operationType, googleEventId));
         }
 
-        try {
-            System.enqueueJob(new GoogleCalendarCalloutService(eventOperations));
-        } catch (Exception e) {
-            // Only retry so many times, before giving up (thus avoid disabling the trigger)
-            if (EventBus.TriggerContext.currentContext().retries < 4) {
-                throw new EventBus.RetryableException(e.getMessage());
-            }
-        }
-
+        System.enqueueJob(new GoogleCalendarCalloutService(eventOperations));
     }
 
     /////////////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////
-    /**
-     *  Get salesforce events from platform event
-     * @return
-     */
-    private Map<Id, Event> getEventByIds() {
-        List<Id> eventsId = new List<Id>();
+    private List<Google_Calendar_Platform_Event__e> getChunkedPlatformEvents() {
+        List<Google_Calendar_Platform_Event__e> chunkedPlatformEvents = new List<Google_Calendar_Platform_Event__e>();
+        Integer counter = 0;
 
-        for (Google_Calendar_Platform_Event__e ple : (List <Google_Calendar_Platform_Event__e>) Trigger.new) {
-            eventsId.add(ple.Salesforce_Event_Id__c);
+        for (Google_Calendar_Platform_Event__e ple : (List<Google_Calendar_Platform_Event__e>) Trigger.new) {
+            if (counter > calloutChunkSize) break;
+            chunkedPlatformEvents.add(ple);
+            counter++;
         }
 
-        Map<Id, Event> events = new Map<Id, Event> ([
-                SELECT Id,
-                        Subject,
-                        StartDateTime,
-                        EndDateTime,
-                        Description
-                FROM Event
-                WHERE Id IN :eventsId
-        ]);
-
-        return events;
+        return chunkedPlatformEvents;
     }
 
     public class EventOperation {
-        public Event event;
+        public String eventJSON;
         public String operationType;
         public String googleEventId;
 
-        public EventOperation(Event event, String operationType, String googleEventId) {
-            this.event = event;
+        public EventOperation(String eventJSON, String operationType, String googleEventId) {
+            this.eventJSON = eventJSON;
             this.operationType = operationType;
             this.googleEventId = googleEventId;
         }

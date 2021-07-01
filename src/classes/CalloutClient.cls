@@ -79,7 +79,7 @@ public with sharing class CalloutClient {
 
                 System.debug(errorMessage + response.getBody());
 
-                throw new CalloutClientException(errorMessage);
+              //  throw new CalloutClientException(errorMessage);
             }
         } catch (System.Exception e) {
             System.debug('#### Exception Executed ' + e.getStackTraceString() + '  ' + e.getMessage());
