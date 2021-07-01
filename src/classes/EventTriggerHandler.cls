@@ -41,11 +41,11 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
         }
 
         for (Event event : triggerContext) {
-            Boolean allowPlatformEvents = allowPlatformEvents(event, oldEventsMap);
-            System.debug('Allow Platform Events? ' + allowPlatformEvents + ' Operation is: ' + operationType);
+            Boolean allowPlatformEvent = allowPlatformEvent(event, oldEventsMap);
+            System.debug('Allow Platform Events? ' + allowPlatformEvent + ' Operation is: ' + operationType);
 
             // TODO: Change this logic
-            if (allowPlatformEvents) {
+            if (allowPlatformEvent) {
                 platformEvents.add(new Google_Calendar_Platform_Event__e(
                         Salesforce_Event_Id__c = event.Id,
                         Google_Event_Id__c = event.Google_Event_Id__c,
@@ -57,7 +57,7 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
     }
 
     // TODO: Change this logic ( run trigger logic if one of the fields was updated )
-    private Boolean allowPlatformEvents(Event newEvent, Map<Id, Event> oldEventsMap) {
+    private Boolean allowPlatformEvent(Event newEvent, Map<Id, Event> oldEventsMap) {
         if (oldEventsMap == null) return true; // Creation of new record
 
         Event oldEvent = oldEventsMap.get(newEvent.Id);
