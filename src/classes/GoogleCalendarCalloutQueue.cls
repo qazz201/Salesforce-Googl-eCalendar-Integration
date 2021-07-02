@@ -3,16 +3,17 @@
  */
 
 public with sharing class GoogleCalendarCalloutQueue implements Queueable, Database.AllowsCallouts {
-//   / private String ownerCalendarId=CalendarApi.getOwnerCalendarId();
-    private CalendarApi calendarApi = new CalendarApi('201qazz@gmail.com');
     private List<Event> salesforceEventsToUpdate = new List<Event>();
     private List<GoogleCalPlatformEventTriggerHandler.EventOperation> platformEvents;
+    private CalendarApi calendarApi;
 
     public GoogleCalendarCalloutQueue(List<GoogleCalPlatformEventTriggerHandler.EventOperation> platformEventOperations) {
         this.platformEvents = platformEventOperations;
     }
 
     public void execute(QueueableContext context) {
+        calendarApi = new CalendarApi(this.getCalendarId());
+
         for (GoogleCalPlatformEventTriggerHandler.EventOperation ple : platformEvents) {
             this.executeCallout(ple.event, ple.operationType);
         }
@@ -90,6 +91,10 @@ public with sharing class GoogleCalendarCalloutQueue implements Queueable, Datab
     /////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////////////
     private void setGoogleEventIdInSalesforceEvent(GoogleCalPlatformEventTriggerHandler.EventDeserialize salesforceEvent, String googleEventId) {
         salesforceEventsToUpdate.add(new Event(Id = salesforceEvent.Id, Google_Event_Id__c = googleEventId));
+    }
+
+    private String getCalendarId() {
+        return new CalendarApi().getOwnerCalendarId();
     }
 
     public class GoogleResponse {

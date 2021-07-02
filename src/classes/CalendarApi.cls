@@ -3,8 +3,6 @@
  */
 
 public with sharing class CalendarApi {
-    public static String activeCalendarId;
-
     private String calendarId;
     private static final String ROOT_PATH = 'callout:Google_Calendar';
 
@@ -35,6 +33,24 @@ public with sharing class CalendarApi {
         return new CalloutClient(endpoint).get();
     }
 
+    public String getOwnerCalendarId() {
+        String calendarId;
+
+        String responseBody = this.getCalendarList().getBody();
+        CalendarListResponse parsedBody = (CalendarListResponse) JSON.deserialize(responseBody, CalendarListResponse.class);
+
+        for (CalendarListItems calendar : parsedBody.items) {
+            System.debug('ACCESSROLE IS= ' + calendar.accessRole + ' CALENDAR ID IS ' + calendar.Id);
+
+            if (calendar.accessRole.toLowerCase() == 'owner') {
+                calendarId = calendar.Id;
+                break;
+            }
+        }
+
+        return calendarId;
+    }
+
     //////////// POST ////////////////////////////////////////
     //@future(callout=true)
     public HttpResponse insertEvent(Object eventBody) {
@@ -58,23 +74,6 @@ public with sharing class CalendarApi {
     public HttpResponse updateEventPATCH(String eventId, Object eventBody) {
         String endpoint = this.formatRequestEndpoint(EVENTS_CHANGE, eventId);
         return new CalloutClient(endpoint).patch(eventBody);
-    }
-
-    public static String getOwnerCalendarId() {
-        if (activeCalendarId == null) {
-            String responseBody = new CalloutClient(ROOT_PATH + apiPath.get(CALENDAR)).get().getBody();
-            CalendarListResponse parsedBody = (CalendarListResponse) JSON.deserialize(responseBody, CalendarListResponse.class);
-
-            for (CalendarListItems calendar : parsedBody.items) {
-                if (calendar.accessRole == 'owner') {
-                    activeCalendarId = calendar.Id;
-                    break;
-                }
-                System.debug('getOwnerCalendarId ACCESSROLE IS= ' + calendar.accessRole + ' CALENDAR ID IS ' + calendar.Id);
-            }
-        }
-
-        return activeCalendarId;
     }
 
     //////////// UTILITY //////////////////////////////////////
