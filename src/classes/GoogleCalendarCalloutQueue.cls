@@ -2,12 +2,12 @@
  * Created by Vladyslav Kravchuk on 6/25/2021.
  */
 
-public with sharing class GoogleCalendarCalloutService implements Queueable, Database.AllowsCallouts {
+public with sharing class GoogleCalendarCalloutQueue implements Queueable, Database.AllowsCallouts {
     private CalendarApi calendarApi = new CalendarApi('201qazz@gmail.com');
     private List<Event> salesforceEventsToUpdate = new List<Event>();
     private List<GoogleCalPlatformEventTriggerHandler.EventOperation> platformEvents;
 
-    public GoogleCalendarCalloutService(List<GoogleCalPlatformEventTriggerHandler.EventOperation> platformEvents) {
+    public GoogleCalendarCalloutQueue(List<GoogleCalPlatformEventTriggerHandler.EventOperation> platformEvents) {
         this.platformEvents = platformEvents;
     }
 
@@ -18,7 +18,7 @@ public with sharing class GoogleCalendarCalloutService implements Queueable, Dat
 
         if (!salesforceEventsToUpdate.isEmpty()) Database.upsert(salesforceEventsToUpdate, false);
 
-        System.debug('GoogleCalendarCalloutService => salesforceEventsToUpdate= ' + salesforceEventsToUpdate);
+        System.debug('GoogleCalendarCalloutQueue => salesforceEventsToUpdate= ' + salesforceEventsToUpdate);
     }
 
     private void executeCallout(String eventJSON, String operationType, String googleEventId) {
@@ -39,13 +39,13 @@ public with sharing class GoogleCalendarCalloutService implements Queueable, Dat
                 ).toJSON();
             }
 
-            if (operationType == PlatformEventTypes.INSERT_TYPE) {
+            if (operationType == EventOperationType.INSERT_TYPE) {
                 httpResponse = this.insertEvent(parsedEvent, requestBody);
 
-            } else if (operationType == PlatformEventTypes.UPDATE_TYPE) {
+            } else if (operationType == EventOperationType.UPDATE_TYPE) {
                 httpResponse = this.updateEvent(parsedEvent, requestBody, googleEventId);
 
-            } else if (operationType == PlatformEventTypes.DELETE_TYPE && googleEventId != null) {
+            } else if (operationType == EventOperationType.DELETE_TYPE && googleEventId != null) {
                 httpResponse = this.deleteEvent(googleEventId);
 
             } else {

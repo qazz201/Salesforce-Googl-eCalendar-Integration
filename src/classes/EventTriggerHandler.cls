@@ -5,17 +5,17 @@
 public with sharing class EventTriggerHandler extends TriggerHandler {
 
     public override void afterInsert() {
-        List<Google_Calendar_Platform_Event__e> platformEvents = this.insertCollectingPlatformEvents(PlatformEventTypes.INSERT_TYPE);
+        List<Google_Calendar_Platform_Event__e> platformEvents = this.getPlatformEventsForInsert(EventOperationType.INSERT_TYPE);
         this.publishPlatformEvent(platformEvents);
     }
 
     public override void afterUpdate() {
-        List<Google_Calendar_Platform_Event__e> platformEvents = this.updateCollectingPlatformEvents(PlatformEventTypes.UPDATE_TYPE);
+        List<Google_Calendar_Platform_Event__e> platformEvents = this.getPlatformEventsForUpdate(EventOperationType.UPDATE_TYPE);
         this.publishPlatformEvent(platformEvents);
     }
 
     public override void afterDelete() {
-        List<Google_Calendar_Platform_Event__e> platformEvents = this.deleteCollectingPlatformEvents(PlatformEventTypes.DELETE_TYPE);
+        List<Google_Calendar_Platform_Event__e> platformEvents = this.getPlatformEventsForDelete(EventOperationType.DELETE_TYPE);
         this.publishPlatformEvent(platformEvents);
     }
 
@@ -26,7 +26,7 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
     }
 
     /////////////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////
-    private List<Google_Calendar_Platform_Event__e> insertCollectingPlatformEvents(String operationType) {
+    private List<Google_Calendar_Platform_Event__e> getPlatformEventsForInsert(String operationType) {
         List<Google_Calendar_Platform_Event__e> platformEvents = new List<Google_Calendar_Platform_Event__e>();
 
         for (Event event : (List<Event>) Trigger.new) {
@@ -39,13 +39,14 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
         return platformEvents;
     }
 
-    private List<Google_Calendar_Platform_Event__e> updateCollectingPlatformEvents(String operationType) {
+    private List<Google_Calendar_Platform_Event__e> getPlatformEventsForUpdate(String operationType) {
         List<Google_Calendar_Platform_Event__e> platformEvents = new List<Google_Calendar_Platform_Event__e>();
         Map<Id, Event> oldEventsMap = (Map<Id, Event>) Trigger.oldMap;
 
         for (Event event : (List<Event>) Trigger.new) {
             Event oldEvent = oldEventsMap.get(event.Id);
 
+            // create platform event if one of the fields has been changed
             if (event.Subject != oldEvent.Subject
                     || event.Description != oldEvent.Description
                     || event.StartDateTime != oldEvent.StartDateTime
@@ -61,7 +62,7 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
         return platformEvents;
     }
 
-    private List<Google_Calendar_Platform_Event__e> deleteCollectingPlatformEvents(String operationType) {
+    private List<Google_Calendar_Platform_Event__e> getPlatformEventsForDelete(String operationType) {
         List<Google_Calendar_Platform_Event__e> platformEvents = new List<Google_Calendar_Platform_Event__e>();
 
         for (Event event : (List<Event>) Trigger.old) {

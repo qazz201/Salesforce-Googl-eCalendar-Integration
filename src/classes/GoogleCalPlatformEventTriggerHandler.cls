@@ -21,7 +21,7 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
             eventOperations.add(new EventOperation(event, operationType, googleEventId));
         }
 
-        System.enqueueJob(new GoogleCalendarCalloutService(eventOperations));
+        System.enqueueJob(new GoogleCalendarCalloutQueue(eventOperations));
     }
 
     /////////////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////
