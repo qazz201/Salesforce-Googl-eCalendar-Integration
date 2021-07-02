@@ -52,7 +52,6 @@ public with sharing class CalendarApi {
     }
 
     //////////// POST ////////////////////////////////////////
-    //@future(callout=true)
     public HttpResponse insertEvent(Object eventBody) {
         String endpoint = this.formatRequestEndpoint(EVENTS);
         return new CalloutClient(endpoint).post(eventBody);

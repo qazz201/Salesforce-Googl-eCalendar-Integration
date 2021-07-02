@@ -20,7 +20,6 @@ public with sharing class GoogleCalendarEventBodyGenerator {
     }
 
     public String toJSON() {
-
         DateTimeFormatting start = new DateTimeFormatting(this.startDateTime);
         DateTimeFormatting finish = new DateTimeFormatting(this.endDateTime);
         BodyParser parser = new BodyParser(subject, description, start, finish);
