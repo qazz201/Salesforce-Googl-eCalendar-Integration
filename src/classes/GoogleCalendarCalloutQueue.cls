@@ -27,7 +27,6 @@ public with sharing class GoogleCalendarCalloutQueue implements Queueable, Datab
         EventDeserialize parsedEvent;
 
         try {
-            // event=null- when operation is DELETE
             if (eventJSON != null) {
                 parsedEvent = (EventDeserialize) JSON.deserialize(eventJSON, EventDeserialize.class);
 
@@ -65,7 +64,7 @@ public with sharing class GoogleCalendarCalloutQueue implements Queueable, Datab
 
         if (httpResponse.getStatusCode() == 200) {
             GoogleResponse googleCalendarEvent = (GoogleResponse) JSON.deserialize(httpResponse.getBody(), GoogleResponse.class);
-            createSalesforceGoogleEventAssociation(salesforceEvent, googleCalendarEvent.Id);
+            this.createSalesforceGoogleEventAssociation(salesforceEvent, googleCalendarEvent.Id);
         }
 
         return httpResponse;
