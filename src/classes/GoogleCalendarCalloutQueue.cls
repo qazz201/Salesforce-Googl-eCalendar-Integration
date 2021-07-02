@@ -3,49 +3,47 @@
  */
 
 public with sharing class GoogleCalendarCalloutQueue implements Queueable, Database.AllowsCallouts {
+//   / private String ownerCalendarId=CalendarApi.getOwnerCalendarId();
     private CalendarApi calendarApi = new CalendarApi('201qazz@gmail.com');
     private List<Event> salesforceEventsToUpdate = new List<Event>();
     private List<GoogleCalPlatformEventTriggerHandler.EventOperation> platformEvents;
 
-    public GoogleCalendarCalloutQueue(List<GoogleCalPlatformEventTriggerHandler.EventOperation> platformEvents) {
-        this.platformEvents = platformEvents;
+    public GoogleCalendarCalloutQueue(List<GoogleCalPlatformEventTriggerHandler.EventOperation> platformEventOperations) {
+        this.platformEvents = platformEventOperations;
     }
 
     public void execute(QueueableContext context) {
         for (GoogleCalPlatformEventTriggerHandler.EventOperation ple : platformEvents) {
-            this.executeCallout(ple.eventJSON, ple.operationType, ple.googleEventId);
+            this.executeCallout(ple.event, ple.operationType);
         }
 
         if (!salesforceEventsToUpdate.isEmpty()) Database.upsert(salesforceEventsToUpdate, false);
 
-        System.debug('GoogleCalendarCalloutQueue => salesforceEventsToUpdate= ' + salesforceEventsToUpdate);
+        System.debug('GoogleCalendarCalloutQueue => salesforceEventsToUpdate = ' + salesforceEventsToUpdate);
     }
 
-    private void executeCallout(String eventJSON, String operationType, String googleEventId) {
+    private void executeCallout(GoogleCalPlatformEventTriggerHandler.EventDeserialize event, String operationType) {
         HttpResponse httpResponse = new HttpResponse();
         String requestBody;
-        EventDeserialize parsedEvent;
 
         try {
-            if (eventJSON != null) {
-                parsedEvent = (EventDeserialize) JSON.deserialize(eventJSON, EventDeserialize.class);
-
+            if (event != null) {
                 requestBody = new GoogleCalendarEventBodyGenerator(
-                        parsedEvent.Subject,
-                        parsedEvent.StartDateTime,
-                        parsedEvent.EndDateTime,
-                        parsedEvent.Description
+                        event.Subject,
+                        event.StartDateTime,
+                        event.EndDateTime,
+                        event.Description
                 ).toJSON();
             }
 
             if (operationType == EventOperationType.INSERT_TYPE) {
-                httpResponse = this.insertEvent(parsedEvent, requestBody);
+                httpResponse = this.insertEvent(event, requestBody);
 
             } else if (operationType == EventOperationType.UPDATE_TYPE) {
-                httpResponse = this.updateEvent(parsedEvent, requestBody, googleEventId);
+                httpResponse = this.updateEvent(event, requestBody);
 
-            } else if (operationType == EventOperationType.DELETE_TYPE && googleEventId != null) {
-                httpResponse = this.deleteEvent(googleEventId);
+            } else if (operationType == EventOperationType.DELETE_TYPE && event.Google_Event_Id != null) {
+                httpResponse = this.deleteEvent(event.Google_Event_Id);
 
             } else {
 
@@ -59,20 +57,21 @@ public with sharing class GoogleCalendarCalloutQueue implements Queueable, Datab
     }
 
     /////////////// INSERT /////////////////////////////////////////////////////////////////////////////////////////////
-    private HttpResponse insertEvent(EventDeserialize salesforceEvent, String requestBody) {
+    private HttpResponse insertEvent(GoogleCalPlatformEventTriggerHandler.EventDeserialize salesforceEvent, String requestBody) {
         HttpResponse httpResponse = calendarApi.insertEvent(requestBody);
 
         if (httpResponse.getStatusCode() == 200) {
             GoogleResponse googleCalendarEvent = (GoogleResponse) JSON.deserialize(httpResponse.getBody(), GoogleResponse.class);
-            this.createSalesforceGoogleEventAssociation(salesforceEvent, googleCalendarEvent.Id);
+            this.setGoogleEventIdInSalesforceEvent(salesforceEvent, googleCalendarEvent.Id);
         }
 
         return httpResponse;
     }
 
     /////////////// UPDATE /////////////////////////////////////////////////////////////////////////////////////////////
-    private HttpResponse updateEvent(EventDeserialize salesforceEvent, String requestBody, String googleEventId) {
+    private HttpResponse updateEvent(GoogleCalPlatformEventTriggerHandler.EventDeserialize salesforceEvent, String requestBody) {
         HttpResponse httpResponse = new HttpResponse();
+        String googleEventId = salesforceEvent.Google_Event_Id;
 
         if (googleEventId == null) {
             httpResponse = this.insertEvent(salesforceEvent, requestBody);
@@ -89,16 +88,8 @@ public with sharing class GoogleCalendarCalloutQueue implements Queueable, Datab
     }
 
     /////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////////////
-    private void createSalesforceGoogleEventAssociation(EventDeserialize salesforceEvent, String googleEventId) {
+    private void setGoogleEventIdInSalesforceEvent(GoogleCalPlatformEventTriggerHandler.EventDeserialize salesforceEvent, String googleEventId) {
         salesforceEventsToUpdate.add(new Event(Id = salesforceEvent.Id, Google_Event_Id__c = googleEventId));
-    }
-
-    public class EventDeserialize {
-        public String Id;
-        public String Subject;
-        public String StartDateTime;
-        public String EndDateTime;
-        public String Description;
     }
 
     public class GoogleResponse {

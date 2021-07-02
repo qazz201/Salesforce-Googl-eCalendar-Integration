@@ -10,18 +10,19 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
         List<EventOperation> eventOperations = new List<EventOperation>();
         List<Google_Calendar_Platform_Event__e> chunkedPlatformEvents = this.getChunkedPlatformEvents();
 
-        Google_Calendar_Platform_Event__e lastPlatformEventInChunk = chunkedPlatformEvents[chunkedPlatformEvents.size() - 1];
-        EventBus.TriggerContext.currentContext().setResumeCheckpoint(lastPlatformEventInChunk.replayId);
+        if (!chunkedPlatformEvents.isEmpty()) {
+            Google_Calendar_Platform_Event__e lastPlatformEventInChunk = chunkedPlatformEvents[chunkedPlatformEvents.size() - 1];
+            EventBus.TriggerContext.currentContext().setResumeCheckpoint(lastPlatformEventInChunk.replayId);
 
-        for (Google_Calendar_Platform_Event__e ple : chunkedPlatformEvents) {
-            String event = ple.Salesforce_Event_JSON__c;
-            String operationType = ple.Operation_Type__c;
-            String googleEventId = ple.Google_Event_Id__c;
+            for (Google_Calendar_Platform_Event__e ple : chunkedPlatformEvents) {
+                EventDeserialize event = this.deserializeEventWithCustomFields(ple.Salesforce_Event_JSON__c);
+                String operationType = ple.Operation_Type__c;
 
-            eventOperations.add(new EventOperation(event, operationType, googleEventId));
+                eventOperations.add(new EventOperation(event, operationType));
+            }
+
+            System.enqueueJob(new GoogleCalendarCalloutQueue(eventOperations));
         }
-
-        System.enqueueJob(new GoogleCalendarCalloutQueue(eventOperations));
     }
 
     /////////////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////
@@ -38,16 +39,28 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
         return chunkedPlatformEvents;
     }
 
-    public class EventOperation {
-        public String eventJSON;
-        public String operationType;
-        public String googleEventId;
+    private EventDeserialize deserializeEventWithCustomFields(String eventJSON) {
+        return (EventDeserialize) JSON.deserialize(eventJSON.replaceAll('__c', ''), EventDeserialize.class);
+    }
 
-        public EventOperation(String eventJSON, String operationType, String googleEventId) {
-            this.eventJSON = eventJSON;
+    public class EventOperation {
+        public EventDeserialize event;
+        public String operationType;
+        // public String googleEventId;
+
+        public EventOperation(EventDeserialize event, String operationType) {
+            this.event = event;
             this.operationType = operationType;
-            this.googleEventId = googleEventId;
+            // this.googleEventId = googleEventId;
         }
+    }
+    public class EventDeserialize {
+        public String Id;
+        public String Subject;
+        public Datetime StartDateTime;
+        public Datetime EndDateTime;
+        public String Description;
+        public String Google_Event_Id;
     }
 
     public class GoogleCalPlatformEventTriggerHandlerException extends Exception {

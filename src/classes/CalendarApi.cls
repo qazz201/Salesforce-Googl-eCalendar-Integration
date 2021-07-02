@@ -3,6 +3,8 @@
  */
 
 public with sharing class CalendarApi {
+    public static String activeCalendarId;
+
     private String calendarId;
     private static final String ROOT_PATH = 'callout:Google_Calendar';
 
@@ -58,6 +60,23 @@ public with sharing class CalendarApi {
         return new CalloutClient(endpoint).patch(eventBody);
     }
 
+    public static String getOwnerCalendarId() {
+        if (activeCalendarId == null) {
+            String responseBody = new CalloutClient(ROOT_PATH + apiPath.get(CALENDAR)).get().getBody();
+            CalendarListResponse parsedBody = (CalendarListResponse) JSON.deserialize(responseBody, CalendarListResponse.class);
+
+            for (CalendarListItems calendar : parsedBody.items) {
+                if (calendar.accessRole == 'owner') {
+                    activeCalendarId = calendar.Id;
+                    break;
+                }
+                System.debug('getOwnerCalendarId ACCESSROLE IS= ' + calendar.accessRole + ' CALENDAR ID IS ' + calendar.Id);
+            }
+        }
+
+        return activeCalendarId;
+    }
+
     //////////// UTILITY //////////////////////////////////////
     private String formatRequestEndpoint(String endpointName) {
         String endpoint = this.getPathByName(endpointName);
@@ -87,6 +106,15 @@ public with sharing class CalendarApi {
         }
 
         return path;
+    }
+
+    public class CalendarListResponse {
+        public List<CalendarListItems> items;
+    }
+
+    public class CalendarListItems {
+        public String Id;
+        public String accessRole;
     }
 
     //////////// EXCEPTION ///////////////////////////////////////

@@ -47,11 +47,7 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
             Event oldEvent = oldEventsMap.get(event.Id);
 
             // create platform event if one of the fields has been changed
-            if (event.Subject != oldEvent.Subject
-                    || event.Description != oldEvent.Description
-                    || event.StartDateTime != oldEvent.StartDateTime
-                    || event.EndDateTime != oldEvent.EndDateTime) {
-
+            if (this.isEventChanged(event, oldEvent)) {
                 Google_Calendar_Platform_Event__e platformEvent = createPlatformEventObj(event, operationType);
                 platformEvents.add(platformEvent);
 
@@ -75,6 +71,19 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
         }
 
         return platformEvents;
+    }
+
+    private Boolean isEventChanged(Event event, Event oldEvent) {
+        if (oldEvent == null) return true; // event was created
+
+        if (event.Subject != oldEvent.Subject
+                || event.Description != oldEvent.Description
+                || event.StartDateTime != oldEvent.StartDateTime
+                || event.EndDateTime != oldEvent.EndDateTime) {
+            return true;
+        }
+
+        return false;
     }
 
     private Google_Calendar_Platform_Event__e createPlatformEventObj(Event event, String operationType) {
