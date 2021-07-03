@@ -4,17 +4,17 @@
 
 public with sharing class GoogleCalendarCalloutQueue implements Queueable, Database.AllowsCallouts {
     private List<Event> salesforceEventsToUpdate = new List<Event>();
-    private List<GoogleCalPlatformEventTriggerHandler.EventOperation> platformEvents;
+    private List<GoogleCalPlatformEventTriggerHandler.EventOperation> eventOperations;
     private CalendarApi calendarApi;
 
-    public GoogleCalendarCalloutQueue(List<GoogleCalPlatformEventTriggerHandler.EventOperation> platformEventOperations) {
-        this.platformEvents = platformEventOperations;
+    public GoogleCalendarCalloutQueue(List<GoogleCalPlatformEventTriggerHandler.EventOperation> eventOperations) {
+        this.eventOperations = eventOperations;
     }
 
     public void execute(QueueableContext context) {
         calendarApi = new CalendarApi(this.getCalendarId());
 
-        for (GoogleCalPlatformEventTriggerHandler.EventOperation ple : platformEvents) {
+        for (GoogleCalPlatformEventTriggerHandler.EventOperation ple : eventOperations) {
             this.executeCallout(ple.event, ple.operationType);
         }
 
