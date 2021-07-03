@@ -31,7 +31,7 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
         Integer counter = 0;
 
         for (Google_Calendar_Platform_Event__e ple : (List<Google_Calendar_Platform_Event__e>) Trigger.new) {
-            if (counter > calloutChunkSize) break;
+            if (counter >= calloutChunkSize) break;
             chunkedPlatformEvents.add(ple);
             counter++;
         }
