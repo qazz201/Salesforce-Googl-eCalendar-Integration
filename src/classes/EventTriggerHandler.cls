@@ -5,21 +5,21 @@
 public with sharing class EventTriggerHandler extends TriggerHandler {
 
     public override void afterInsert() {
-        List<Event> eventList = this.eventsForInsert();
+        List<Event> eventList = this.getFilteredEventsForInsert();
         List<Google_Calendar_Platform_Event__e> platformEvents = this.createPlatformEvents(eventList, EventOperationType.INSERT_TYPE);
 
         this.publishPlatformEvents(platformEvents);
     }
 
     public override void afterUpdate() {
-        List<Event> eventList = this.eventsForUpdate();
+        List<Event> eventList = this.getFilteredEventsForUpdate();
         List<Google_Calendar_Platform_Event__e> platformEvents = this.createPlatformEvents(eventList, EventOperationType.UPDATE_TYPE);
 
         this.publishPlatformEvents(platformEvents);
     }
 
     public override void afterDelete() {
-        List<Event> eventList = this.eventsForDelete();
+        List<Event> eventList = this.getFilteredEventsForDelete();
         List<Google_Calendar_Platform_Event__e> platformEvents = this.createPlatformEvents(eventList, EventOperationType.DELETE_TYPE);
 
         this.publishPlatformEvents(platformEvents);
@@ -50,11 +50,11 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
         return platformEvents;
     }
 
-    private List<Event> eventsForInsert() {
+    private List<Event> getFilteredEventsForInsert() {
         return (List<Event>) Trigger.new;
     }
 
-    private List<Event> eventsForUpdate() {
+    private List<Event> getFilteredEventsForUpdate() {
         Map<Id, Event> oldEventsMap = (Map<Id, Event>) Trigger.oldMap;
         List<Event> eventList = new List<Event>();
 
@@ -70,7 +70,7 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
         return eventList;
     }
 
-    private List<Event> eventsForDelete() {
+    private List<Event> getFilteredEventsForDelete() {
         List<Event> eventList = new List<Event>();
 
         for (Event event : (List<Event>) Trigger.old) {

@@ -3,26 +3,26 @@
  */
 
 public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHandler {
-    private static final Integer calloutChunkSize = 100; // 150-max
+    private static final Integer calloutChunkSize = 1; // 150-max
 
     //Limits.getHeapSize() >= Limits.getLimitHeapSize()
     public override void afterInsert() {
         List<EventOperation> eventOperations = new List<EventOperation>();
         List<Google_Calendar_Platform_Event__e> chunkedPlatformEvents = this.getChunkedPlatformEvents();
 
-        if (!chunkedPlatformEvents.isEmpty()) {
-            Google_Calendar_Platform_Event__e lastPlatformEventInChunk = chunkedPlatformEvents[chunkedPlatformEvents.size() - 1];
-            EventBus.TriggerContext.currentContext().setResumeCheckpoint(lastPlatformEventInChunk.replayId);
+        if (chunkedPlatformEvents.isEmpty()) return;
 
-            for (Google_Calendar_Platform_Event__e ple : chunkedPlatformEvents) {
-                EventDeserialize event = this.deserializeEventWithCustomFields(ple.Salesforce_Event_JSON__c);
-                String operationType = ple.Operation_Type__c;
+        Google_Calendar_Platform_Event__e lastPlatformEventInChunk = chunkedPlatformEvents[chunkedPlatformEvents.size() - 1];
+        EventBus.TriggerContext.currentContext().setResumeCheckpoint(lastPlatformEventInChunk.replayId);
 
-                eventOperations.add(new EventOperation(event, operationType));
-            }
+        for (Google_Calendar_Platform_Event__e ple : chunkedPlatformEvents) {
+            EventDeserialize event = this.deserializeEventWithCustomFields(ple.Salesforce_Event_JSON__c);
+            String operationType = ple.Operation_Type__c;
 
-            System.enqueueJob(new GoogleCalendarCalloutQueue(eventOperations));
+            eventOperations.add(new EventOperation(event, operationType));
         }
+
+        System.enqueueJob(new GoogleCalendarCalloutQueue(eventOperations));
     }
 
     /////////////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////
