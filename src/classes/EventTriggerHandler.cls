@@ -6,23 +6,17 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
 
     public override void afterInsert() {
         List<Event> eventList = this.getFilteredEventsForInsert();
-        List<Google_Calendar_Platform_Event__e> platformEvents = this.createPlatformEvents(eventList, EventOperationType.INSERT_TYPE);
-
-        this.publishPlatformEvents(platformEvents);
+        this.publishPlatformEvents(this.createPlatformEvents(eventList, EventOperationType.INSERT_TYPE));
     }
 
     public override void afterUpdate() {
         List<Event> eventList = this.getFilteredEventsForUpdate();
-        List<Google_Calendar_Platform_Event__e> platformEvents = this.createPlatformEvents(eventList, EventOperationType.UPDATE_TYPE);
-
-        this.publishPlatformEvents(platformEvents);
+        this.publishPlatformEvents(this.createPlatformEvents(eventList, EventOperationType.UPDATE_TYPE));
     }
 
     public override void afterDelete() {
         List<Event> eventList = this.getFilteredEventsForDelete();
-        List<Google_Calendar_Platform_Event__e> platformEvents = this.createPlatformEvents(eventList, EventOperationType.DELETE_TYPE);
-
-        this.publishPlatformEvents(platformEvents);
+        this.publishPlatformEvents(this.createPlatformEvents(eventList, EventOperationType.DELETE_TYPE));
     }
 
     private void publishPlatformEvents(List<Google_Calendar_Platform_Event__e> platformEvents) {
