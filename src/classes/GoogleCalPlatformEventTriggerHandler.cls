@@ -3,7 +3,7 @@
  */
 
 public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHandler {
-    private static final Integer calloutChunkSize = 1; // 150-max
+    private static final Integer calloutChunkSize = 100; // 150-max
 
     //Limits.getHeapSize() >= Limits.getLimitHeapSize()
     public override void afterInsert() {
