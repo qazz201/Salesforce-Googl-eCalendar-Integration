@@ -3,6 +3,9 @@
  */
 
 public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHandler {
+    @TestVisible
+    private static List<Integer> chunkedPlatformEventsList = new List<Integer>(); // Only for test purposes
+    @TestVisible
     private static final Integer calloutChunkSize = 100; // 150-max
 
     //Limits.getHeapSize() >= Limits.getLimitHeapSize()
@@ -20,6 +23,11 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
             String operationType = ple.Operation_Type__c;
 
             eventOperations.add(new EventOperation(event, operationType));
+        }
+
+        if (Test.isRunningTest()) {
+            chunkedPlatformEventsList.add(chunkedPlatformEvents.size());
+            return;
         }
 
         System.enqueueJob(new GoogleCalendarCalloutQueue(eventOperations));

@@ -3,6 +3,8 @@
  */
 
 public with sharing class EventTriggerHandler extends TriggerHandler {
+    @TestVisible
+    private static List<Google_Calendar_Platform_Event__e> pleEvents = new List<Google_Calendar_Platform_Event__e>(); // Only for test purposes
 
     public override void afterInsert() {
         List<Event> eventList = this.getFilteredEventsForInsert();
@@ -20,6 +22,12 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
     }
 
     private void publishPlatformEvents(List<Google_Calendar_Platform_Event__e> platformEvents) {
+        if (Test.IsRunningTest()) {
+            pleEvents = platformEvents;
+
+            return;
+        }
+
         if (!platformEvents.isEmpty()) EventBus.publish(platformEvents);
 
         System.debug('PLATFORM EVENTS SIZE= ' + platformEvents.size() + ' Platform events: ' + platformEvents);
