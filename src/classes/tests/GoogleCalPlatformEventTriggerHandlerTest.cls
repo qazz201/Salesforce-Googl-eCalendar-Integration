@@ -11,7 +11,7 @@ private class GoogleCalPlatformEventTriggerHandlerTest {
 
     @IsTest
     static void afterInsertChunkTest() {
-        Integer totalPlatformEventCount = 101;
+        Integer totalPlatformEventCount = 110;
         Integer allowedEventCountInChunk = GoogleCalPlatformEventTriggerHandler.calloutChunkSize;
         Integer expectedChunkGroupSize = getChunkGroupSize(allowedEventCountInChunk, totalPlatformEventCount);
 
@@ -28,20 +28,15 @@ private class GoogleCalPlatformEventTriggerHandlerTest {
 
             System.assertEquals(true, areAllEventsPublishedSuccessful(sr));
             System.assertEquals(expectedChunkGroupSize, GoogleCalPlatformEventTriggerHandler.chunkedPlatformEventsList.size(), 'Chunks should be equal');
-            System.debug(GoogleCalPlatformEventTriggerHandler.chunkedPlatformEventsList);
+
+            System.debug('EXPECTED ' + expectedChunkGroupSize + ' ACTUAL ' + GoogleCalPlatformEventTriggerHandler.chunkedPlatformEventsList);
         }
     }
 
     private static Integer getChunkGroupSize(Integer allowedEventCount, Integer customEventCount) {
         Decimal iterationGroup = (Decimal) customEventCount / allowedEventCount;
 
-        if (iterationGroup < 1) {
-            iterationGroup = 1;
-        } else {
-            iterationGroup = iterationGroup.round(System.RoundingMode.UP);
-        }
-
-        return (Integer) iterationGroup;
+        return (Integer) iterationGroup.round(System.RoundingMode.UP);
     }
 
     private static Boolean areAllEventsPublishedSuccessful(List<Database.SaveResult> publishResults) {
