@@ -63,4 +63,19 @@ public with sharing class TestDataFactory {
 
         return platformEvents;
     }
+
+    public static List<Google_Calendar_Platform_Event__e> createPlatformEvents(Integer count, String operationType, List<Event> events) {
+        List<Google_Calendar_Platform_Event__e> platformEvents = new List<Google_Calendar_Platform_Event__e>();
+
+        for (Event event : events) {
+            platformEvents.add(
+                    new Google_Calendar_Platform_Event__e(
+                            Salesforce_Event_JSON__c = JSON.serialize(event),
+                            Operation_Type__c = operationType
+                    )
+            );
+        }
+
+        return platformEvents;
+    }
 }

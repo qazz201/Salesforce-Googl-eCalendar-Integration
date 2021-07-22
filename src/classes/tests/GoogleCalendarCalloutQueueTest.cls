@@ -1,0 +1,116 @@
+/**
+ * Created by Vladyslav Kravchuk on 7/22/2021.
+ */
+
+@IsTest
+private class GoogleCalendarCalloutQueueTest {
+    private static final Integer eventCount = 90;
+    @TestSetup
+    static void setup() {
+        System.runAs(TestDataFactory.createAdminUser()) {
+            List<Event> events = TestDataFactory.createEvents(eventCount);
+            insert events;
+        }
+    }
+
+    @IsTest
+    static void insertTest() {
+        User adminUser = getAdminUser();
+
+        System.runAs(adminUser) {
+            List<Event> events = getEventList();
+            RequestMock mimicGETResp = new RequestMock(200, getGETResponse());
+            RequestMock mimicPOSTResp = new RequestMock(200, getPOSTResponse());
+
+            Map<String, HttpCalloutMock> methodToTestResp = new Map<String, HttpCalloutMock>();
+            methodToTestResp.put('GET', mimicGETResp);
+            methodToTestResp.put('POST', mimicPOSTResp);
+
+            HttpCalloutMock multiCalloutMock = new MultiRequestMock(methodToTestResp);
+            Test.setMock(HttpCalloutMock.class, multiCalloutMock);
+
+            Test.startTest();
+            System.enqueueJob(new GoogleCalendarCalloutQueue(getQuePayload(EventOperationType.INSERT_TYPE, events)));
+            Test.stopTest();
+
+            System.debug('RRRRRRRRRRRRRRRRRRRRR'+getEventList()[0]);
+        }
+    }
+
+    private static User getAdminUser() {
+        return [SELECT Id FROM User WHERE Username = :TestDataFactory.USERNAME LIMIT 1];
+    }
+
+    private static List<Event> getEventList() {
+        Set<String> evFieldList = Schema.getGlobalDescribe().get('Event').getDescribe().fields.getMap().keySet();
+        List<String> strList = new List<String>();
+        strList.addAll(evFieldList);
+        String fields = string.join(strList, ',');
+
+        return Database.query('SELECT ' + fields + ' FROM Event Limit ' + eventCount);
+    }
+
+    private static String getGETResponse() {
+        return '{"items": [\n' +
+                '  {\n' +
+                '   "id": "test@gmail.com",\n' +
+                '   "accessRole": "owner"' +
+                '}]' +
+                '}';
+    }
+
+    private static String getPOSTResponse() {
+        return '{"id": "gk0m0ch0kmf86hbevj3plv00kg"}';
+    }
+
+    private static List<GoogleCalPlatformEventTriggerHandler.EventOperation> getQuePayload(String operationType, List<Event> events) {
+        List<Google_Calendar_Platform_Event__e> platformEvents = TestDataFactory.createPlatformEvents(eventCount, operationType, events);
+        List<GoogleCalPlatformEventTriggerHandler.EventOperation> eventOperations = new List<GoogleCalPlatformEventTriggerHandler.EventOperation>();
+
+        for (Google_Calendar_Platform_Event__e ple : platformEvents) {
+            GoogleCalPlatformEventTriggerHandler.EventDeserialize event = (GoogleCalPlatformEventTriggerHandler.EventDeserialize) JSON.deserialize(ple.Salesforce_Event_JSON__c.replaceAll('__c', ''), GoogleCalPlatformEventTriggerHandler.EventDeserialize.class);
+
+            eventOperations.add(new GoogleCalPlatformEventTriggerHandler.EventOperation(event, operationType));
+        }
+
+        return eventOperations;
+    }
+
+    public class RequestMock implements HttpCalloutMock {
+        protected Integer code;
+        protected String bodyAsString;
+
+        public RequestMock(Integer code, String body) {
+            this.code = code;
+            this.bodyAsString = body;
+        }
+
+        public HTTPResponse respond(HTTPRequest req) {
+            HttpResponse resp = new HttpResponse();
+            resp.setStatusCode(code);
+
+            if (bodyAsString != null) resp.setBody(bodyAsString);
+
+            return resp;
+        }
+    }
+
+    public class MultiRequestMock implements HttpCalloutMock {
+        Map<String, HttpCalloutMock> requests;
+
+        public MultiRequestMock(Map<String, HttpCalloutMock> requests) {
+            this.requests = requests;
+        }
+
+        public HTTPResponse respond(HTTPRequest req) {
+            HttpCalloutMock mock = requests.get(req.getMethod());
+            if (mock != null) {
+                return mock.respond(req);
+            } else {
+                System.debug('HTTP callout not supported for test methods');
+                return null;
+            }
+        }
+    }
+
+}

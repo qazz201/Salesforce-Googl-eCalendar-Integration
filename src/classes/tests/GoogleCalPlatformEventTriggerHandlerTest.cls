@@ -23,7 +23,6 @@ private class GoogleCalPlatformEventTriggerHandlerTest {
             Test.startTest();
             List<Database.SaveResult> sr = EventBus.publish(platformEvents);
             Test.getEventBus().deliver();
-
             Test.stopTest();
 
             System.assertEquals(true, areAllEventsPublishedSuccessful(sr));
@@ -34,9 +33,9 @@ private class GoogleCalPlatformEventTriggerHandlerTest {
     }
 
     private static Integer getChunkGroupSize(Integer allowedEventCount, Integer customEventCount) {
-        Decimal iterationGroup = (Decimal) customEventCount / allowedEventCount;
+        Decimal chunksCount = (Decimal) customEventCount / allowedEventCount;
 
-        return (Integer) iterationGroup.round(System.RoundingMode.UP);
+        return (Integer) chunksCount.round(System.RoundingMode.UP);
     }
 
     private static Boolean areAllEventsPublishedSuccessful(List<Database.SaveResult> publishResults) {
