@@ -16,7 +16,7 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
         if (chunkedPlatformEvents.isEmpty()) return;
 
         Google_Calendar_Platform_Event__e lastPlatformEventInChunk = chunkedPlatformEvents[chunkedPlatformEvents.size() - 1];
-        EventBus.TriggerContext.currentContext().setResumeCheckpoint(lastPlatformEventInChunk.replayId);
+        EventBus.TriggerContext.currentContext().setResumeCheckpoint(lastPlatformEventInChunk.ReplayId);
 
         for (Google_Calendar_Platform_Event__e ple : chunkedPlatformEvents) {
             EventDeserialize event = this.deserializeEventWithCustomFields(ple.Salesforce_Event_JSON__c);
@@ -27,7 +27,6 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
 
         if (Test.isRunningTest()) {
             chunkedPlatformEventsList.add(chunkedPlatformEvents.size());
-            return;
         }
 
         System.enqueueJob(new GoogleCalendarCalloutQueue(eventOperations));

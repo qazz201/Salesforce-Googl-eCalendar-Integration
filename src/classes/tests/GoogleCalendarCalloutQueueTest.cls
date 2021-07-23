@@ -5,76 +5,55 @@
 @IsTest
 private class GoogleCalendarCalloutQueueTest {
     private static final Integer eventCount = 90;
+
     @TestSetup
     static void setup() {
-        System.runAs(TestDataFactory.createAdminUser()) {
-            List<Event> events = TestDataFactory.createEvents(eventCount);
-            insert events;
-        }
+        List<Event> events = TestDataFactory.createEvents(eventCount);
+        insert events;
     }
 
     @IsTest
     static void insertTest() {
-        User adminUser = getAdminUser();
-
-        System.runAs(adminUser) {
-            List<Event> events = getEventList();
-            Test.setMock(HttpCalloutMock.class, setRequestMocks());
-
-            Test.startTest();
-            System.enqueueJob(new GoogleCalendarCalloutQueue(getQuePayload(EventOperationType.INSERT_TYPE, events)));
-            Test.stopTest();
-
-            List<Event> eventsUpdated = getEventList();
-
-            System.assertEquals(false, areAllEventsHaveGoogleId(events), 'Events should not have Google event Id');
-            System.assertEquals(true, areAllEventsHaveGoogleId(eventsUpdated), 'Events should have Google event Id');
-        }
+        assertQueueResult(EventOperationType.INSERT_TYPE);
     }
 
     @IsTest
     static void updateTest() {
-        User adminUser = getAdminUser();
-
-        System.runAs(adminUser) {
-            List<Event> events = getEventList();
-            Test.setMock(HttpCalloutMock.class, setRequestMocks());
-
-            Test.startTest();
-            System.enqueueJob(new GoogleCalendarCalloutQueue(getQuePayload(EventOperationType.UPDATE_TYPE, events)));
-            Test.stopTest();
-
-            List<Event> eventsUpdated = getEventList();
-
-            System.assertEquals(false, areAllEventsHaveGoogleId(events), 'Events should not have Google event Id');
-            System.assertEquals(true, areAllEventsHaveGoogleId(eventsUpdated), 'Events should have Google event Id');
-        }
+        assertQueueResult(EventOperationType.UPDATE_TYPE);
     }
 
+    private static void assertQueueResult(String operationType) {
+        List<Event> events = getEventList();
 
-    private static User getAdminUser() {
-        return [SELECT Id FROM User WHERE Username = :TestDataFactory.USERNAME LIMIT 1];
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, setRequestMocks());
+        System.enqueueJob(new GoogleCalendarCalloutQueue(getQuePayload(operationType, events)));
+        Test.stopTest();
+
+        List<Event> eventsUpdated = getEventList();
+
+        System.assertEquals(false, areAllEventsHaveGoogleId(events), 'Events should not have Google event Id');
+        System.assertEquals(true, areAllEventsHaveGoogleId(eventsUpdated), 'Events should have Google event Id');
     }
 
     private static List<Event> getEventList() {
         Set<String> evFieldList = Schema.getGlobalDescribe().get('Event').getDescribe().fields.getMap().keySet();
-        List<String> strList = new List<String>();
-        strList.addAll(evFieldList);
+        List<String> strList = new List<String>(evFieldList);
         String fields = string.join(strList, ',');
 
         return Database.query('SELECT ' + fields + ' FROM Event Limit ' + eventCount);
     }
 
-    private static MultiRequestMock setRequestMocks(){
+    private static MultiRequestMock setRequestMocks() {
         RequestMock mimicGETResp = new RequestMock(200, mockGETResponse());
         RequestMock mimicPOSTResp = new RequestMock(200, mockPOSTResponse());
 
-        Map<String, HttpCalloutMock> methodToTestResp = new Map<String, HttpCalloutMock>();
-        methodToTestResp.put('GET', mimicGETResp);
-        methodToTestResp.put('POST', mimicPOSTResp);
-        methodToTestResp.put('PUT', mimicPOSTResp);
+        MultiRequestMock multiRequestMock = new MultiRequestMock();
+        multiRequestMock.addMock('GET', mimicGETResp);
+        multiRequestMock.addMock('POST', mimicPOSTResp);
+        multiRequestMock.addMock('PUT', mimicPOSTResp);
 
-        return new MultiRequestMock(methodToTestResp);
+        return multiRequestMock;
     }
 
     private static Boolean areAllEventsHaveGoogleId(List<Event> events) {
@@ -130,7 +109,10 @@ private class GoogleCalendarCalloutQueueTest {
     }
 
     public class MultiRequestMock implements HttpCalloutMock {
-        Map<String, HttpCalloutMock> requests;
+        Map<String, HttpCalloutMock> requests = new Map<String, HttpCalloutMock>();
+
+        public MultiRequestMock() {
+        }
 
         public MultiRequestMock(Map<String, HttpCalloutMock> requests) {
             this.requests = requests;
@@ -144,6 +126,10 @@ private class GoogleCalendarCalloutQueueTest {
                 System.debug('HTTP callout not supported for test methods');
                 return null;
             }
+        }
+
+        public void addMock(String method, RequestMock mock) {
+            this.requests.put(method, mock);
         }
     }
 
