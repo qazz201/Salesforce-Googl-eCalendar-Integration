@@ -6,7 +6,7 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
     @TestVisible
     private static List<Integer> chunkedPlatformEventsList = new List<Integer>(); // Only for test purposes
     @TestVisible
-    private static final Integer calloutChunkSize = 100; // 150-max
+    private static final Integer calloutChunkSize = 90; // 100-max
 
     //Limits.getHeapSize() >= Limits.getLimitHeapSize()
     public override void afterInsert() {
