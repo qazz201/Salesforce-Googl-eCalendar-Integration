@@ -5,6 +5,7 @@
 public with sharing class CalloutClient {
     private String endpoint;
     private Map<String, String> headers = new Map<String, String>();
+    @TestVisible
     private HttpRequest request = new HttpRequest();
 
     public CalloutClient(String requestEndpoint) {

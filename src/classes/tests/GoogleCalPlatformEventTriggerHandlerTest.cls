@@ -4,95 +4,77 @@
 
 @IsTest
 private class GoogleCalPlatformEventTriggerHandlerTest {
-    private static final Integer eventCount = 350;
-
-    @TestSetup
-    static void setup() {
-        List<Event> events = TestDataFactory.createEvents(eventCount);
-        insert events;
-    }
-
     @IsTest
     static void afterInsertChunkTest() {
-        // Integer totalPlatformEventCount = 110;
+        Integer totalPlatformEventCount = 150;
         Integer allowedEventCountInChunk = GoogleCalPlatformEventTriggerHandler.calloutChunkSize;
-        Integer expectedChunkGroupSize = getChunkGroupSize(allowedEventCountInChunk, eventCount);
+        Integer expectedChunkGroupSize = getChunkGroupSize(allowedEventCountInChunk, totalPlatformEventCount);
 
-        List<Google_Calendar_Platform_Event__e> platformEvents = TestDataFactory.createPlatformEvents(eventCount, EventOperationType.INSERT_TYPE, null);
+        List<Google_Calendar_Platform_Event__e> platformEvents = GoogleCalendarTestDataFactory.createPlatformEvents(totalPlatformEventCount, EventOperationType.INSERT_TYPE, null);
 
         Test.startTest();
         Test.setMock(HttpCalloutMock.class, setRequestMocks());
 
         List<Database.SaveResult> sr = EventBus.publish(platformEvents);
-        Test.getEventBus().deliver();
+
+        for (Integer i = 0; i <= expectedChunkGroupSize; i++) {
+            Test.getEventBus().deliver();
+        }
+
         Test.stopTest();
+
+        System.debug('EXPECTED ' + expectedChunkGroupSize + ' ACTUAL ' + GoogleCalPlatformEventTriggerHandler.chunkedPlatformEventsList);
 
         System.assertEquals(true, areAllEventsPublishedSuccessful(sr));
         System.assertEquals(expectedChunkGroupSize, GoogleCalPlatformEventTriggerHandler.chunkedPlatformEventsList.size(), 'Chunks should be equal');
-
-        System.debug('EXPECTED ' + expectedChunkGroupSize + ' ACTUAL ' + GoogleCalPlatformEventTriggerHandler.chunkedPlatformEventsList);
     }
 
     @IsTest
-    static void queueResultTest() {
+    static void queueTest() {
+        assertPlatformEventsResult(110);
+    }
+
+    @IsTest
+    static void queueStressTest() {
+        // 495 max - Else error will be thrown:
+        // LIMIT_EXCEEDED - The number of platform event messages published from an Apex test context exceeded the limit of 500.
+        assertPlatformEventsResult(495);
+    }
+
+    private static void assertPlatformEventsResult(Integer count) {
         Integer allowedEventCountInChunk = GoogleCalPlatformEventTriggerHandler.calloutChunkSize;
-        Integer expectedChunkGroupSize = getChunkGroupSize(allowedEventCountInChunk, eventCount);
+        Integer expectedChunkGroupSize = getChunkGroupSize(allowedEventCountInChunk, count);
 
-        List<Event> events = getEventList(eventCount);
+        List<Event> events = GoogleCalendarTestDataFactory.createEvents(count);
+        insert events;
 
-        List<Google_Calendar_Platform_Event__e> platformEvents = TestDataFactory.createPlatformEvents(eventCount, EventOperationType.INSERT_TYPE, events);
+        List<Google_Calendar_Platform_Event__e> platformEvents = GoogleCalendarTestDataFactory.createPlatformEvents(count, EventOperationType.INSERT_TYPE, events);
 
         Test.startTest();
         Test.setMock(HttpCalloutMock.class, setRequestMocks());
 
-        EventBus.publish(platformEvents);
+        List<Database.SaveResult> sr = EventBus.publish(platformEvents);
 
-        for (Integer i = 0; i < expectedChunkGroupSize; i++) {
+        for (Integer i = 0; i <= expectedChunkGroupSize; i++) {
             Test.getEventBus().deliver();
 
-            EventBusSubscriber ss = [
+            EventBusSubscriber ebSubscriber = [
                     SELECT Name, Position, Topic
                     FROM EventBusSubscriber
                     WHERE Topic = 'Google_Calendar_Platform_Event__e'
             ];
 
-            System.debug('SSSSSSSSSSSSSSSSSSSSS' + ss);
+            System.debug('Google_Calendar_Platform_Event__e' + ebSubscriber);
         }
 
         Test.stopTest();
 
-        List<Event> eventsUpdated = getEventList(eventCount);
+        List<Event> eventsUpdated = getEventList(count);
 
+        System.assertEquals(true, areAllEventsPublishedSuccessful(sr));
         System.assertEquals(false, areAllEventsHaveGoogleId(events), 'Events should not have Google event Id');
         System.assertEquals(true, areAllEventsHaveGoogleId(eventsUpdated), 'Events should have Google event Id');
     }
-
-//    @IsTest
-//    static void queueStressTest() {
-//        publishPlatformEvents(10);
-//    }
-//
-//    private static void publishPlatformEvents(Integer count) {
-//        List<Event> events = TestDataFactory.createEvents(count);
-//        insert events;
-//
-//        System.debug('AAAAAAAAA' + events[0]);
-//        List<Google_Calendar_Platform_Event__e> platformEvents = TestDataFactory.createPlatformEvents(count, EventOperationType.INSERT_TYPE, events);
-//
-//        Test.startTest();
-//        Test.setMock(HttpCalloutMock.class, setRequestMocks());
-//
-//        EventBus.publish(platformEvents);
-//        Test.getEventBus().deliver();
-//
-//        Test.stopTest();
-//
-//        List<Event> eventsUpdated = getEventList();
-//
-//        System.debug('BBBBBBBBBBBBBBB' + eventsUpdated[0].Google_Event_Id__c);
-////        System.assertEquals(false, areAllEventsHaveGoogleId(events), 'Events should not have Google event Id');
-////        System.assertEquals(true, areAllEventsHaveGoogleId(eventsUpdated), 'Events should have Google event Id');
-//    }
 
     private static Integer getChunkGroupSize(Integer allowedEventCount, Integer customEventCount) {
         Decimal chunksCount = (Decimal) customEventCount / allowedEventCount;
@@ -102,7 +84,16 @@ private class GoogleCalPlatformEventTriggerHandlerTest {
 
     private static Boolean areAllEventsPublishedSuccessful(List<Database.SaveResult> publishResults) {
         for (Database.SaveResult sr : publishResults) {
-            if (!sr.isSuccess()) return false;
+            if (!sr.isSuccess()) {
+                for (Database.Error err : sr.getErrors()) {
+                    System.debug('Error returned: ' +
+                            err.getStatusCode() +
+                            ' - ' +
+                            err.getMessage());
+                }
+
+                return false;
+            }
         }
         return true;
     }
@@ -123,7 +114,6 @@ private class GoogleCalPlatformEventTriggerHandlerTest {
 
     private static Boolean areAllEventsHaveGoogleId(List<Event> events) {
         for (Event event : events) {
-            System.debug('AAAAAAAAAAAA= ' + event.Google_Event_Id__c + ' ___ ' + event);
             if (event.Google_Event_Id__c == null) return false;
         }
         return true;

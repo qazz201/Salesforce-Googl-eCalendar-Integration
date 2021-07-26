@@ -8,7 +8,7 @@ private class GoogleCalendarCalloutQueueTest {
 
     @TestSetup
     static void setup() {
-        List<Event> events = TestDataFactory.createEvents(eventCount);
+        List<Event> events = GoogleCalendarTestDataFactory.createEvents(eventCount);
         insert events;
     }
 
@@ -77,7 +77,7 @@ private class GoogleCalendarCalloutQueueTest {
     }
 
     private static List<GoogleCalPlatformEventTriggerHandler.EventOperation> getQuePayload(String operationType, List<Event> events) {
-        List<Google_Calendar_Platform_Event__e> platformEvents = TestDataFactory.createPlatformEvents(eventCount, operationType, events);
+        List<Google_Calendar_Platform_Event__e> platformEvents = GoogleCalendarTestDataFactory.createPlatformEvents(eventCount, operationType, events);
         List<GoogleCalPlatformEventTriggerHandler.EventOperation> eventOperations = new List<GoogleCalPlatformEventTriggerHandler.EventOperation>();
 
         for (Google_Calendar_Platform_Event__e ple : platformEvents) {

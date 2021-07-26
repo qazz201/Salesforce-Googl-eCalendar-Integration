@@ -2,35 +2,7 @@
  * Created by Vladyslav Kravchuk on 7/6/2021.
  */
 
-public with sharing class TestDataFactory {
-    private static final String ADMIN_PROFILE_NAME = 'System Administrator';
-    public static final String USERNAME = 'adminusertest1@test.com';
-
-    public static User createAdminUser() {
-        Profile adminProfile = [
-                SELECT
-                        Id
-                FROM Profile
-                WHERE Name = :ADMIN_PROFILE_NAME
-                LIMIT 1
-        ];
-
-        User adminUser = new User(
-                Alias = 'admin',
-                Email = USERNAME,
-                EmailEncodingKey = 'UTF-8',
-                LastName = 'Testing',
-                FirstName = 'Testing',
-                LanguageLocaleKey = 'en_US',
-                LocaleSidKey = 'en_US',
-                ProfileId = adminProfile.Id,
-                TimeZoneSidKey = 'America/Los_Angeles',
-                Username = USERNAME
-        );
-        insert adminUser;
-
-        return adminUser;
-    }
+public with sharing class GoogleCalendarTestDataFactory {
 
     public static List<Event> createEvents(Integer count) {
         List<Event> events = new List<Event>();

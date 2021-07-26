@@ -46,6 +46,7 @@ public with sharing class GoogleCalPlatformEventTriggerHandler extends TriggerHa
         return chunkedPlatformEvents;
     }
 
+    @TestVisible
     private EventDeserialize deserializeEventWithCustomFields(String eventJSON) {
         return (EventDeserialize) JSON.deserialize(eventJSON.replaceAll('__c', ''), EventDeserialize.class);
     }
