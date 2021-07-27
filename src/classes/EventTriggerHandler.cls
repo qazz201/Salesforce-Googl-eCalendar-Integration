@@ -24,7 +24,6 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
     private void publishPlatformEvents(List<Google_Calendar_Platform_Event__e> platformEvents) {
         if (Test.IsRunningTest()) {
             pleEvents = platformEvents;
-
             return;
         }
 
@@ -53,7 +52,15 @@ public with sharing class EventTriggerHandler extends TriggerHandler {
     }
 
     private List<Event> getFilteredEventsForInsert() {
-        return (List<Event>) Trigger.new;
+        List<Event> eventList = (List<Event>) Trigger.new;
+        List<Event> result = new List<Event>();
+
+        for (Event event : eventList) {
+            if (event.Google_Event_Id__c == null) result.add(event); // event is created from salesforce. Else event is retrieved from Google calendar
+        }
+
+        System.debug('EVENT TRIGGERRR INSERTT ' + result);
+        return result;
     }
 
     private List<Event> getFilteredEventsForUpdate() {
