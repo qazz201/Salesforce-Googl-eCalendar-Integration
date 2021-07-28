@@ -12,7 +12,7 @@ public with sharing class GoogleCalendarCalloutQueue implements Queueable, Datab
     }
 
     public void execute(QueueableContext context) {
-        this.calendarApi = new CalendarApi(this.getCalendarId());
+        this.calendarApi = new CalendarApi();
 
         for (GoogleCalPlatformEventTriggerHandler.EventOperation ple : eventOperations) {
             this.executeCallout(ple.event, ple.operationType);
@@ -91,10 +91,6 @@ public with sharing class GoogleCalendarCalloutQueue implements Queueable, Datab
     /////////////// UTILITY ////////////////////////////////////////////////////////////////////////////////////////////
     private void setGoogleEventIdInSalesforceEvent(GoogleCalPlatformEventTriggerHandler.EventDeserialize salesforceEvent, String googleEventId) {
         salesforceEventsToUpdate.add(new Event(Id = salesforceEvent.Id, Google_Event_Id__c = googleEventId));
-    }
-
-    private String getCalendarId() {
-        return new CalendarApi().getOwnerCalendarId();
     }
 
     public class GoogleResponse {
