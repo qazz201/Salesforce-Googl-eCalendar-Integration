@@ -19,6 +19,7 @@ public with sharing class CalendarApi {
     };
 
     public CalendarApi() {
+        this.calendarId = this.getOwnerCalendarId();
     }
 
     public CalendarApi(String calendarId) {

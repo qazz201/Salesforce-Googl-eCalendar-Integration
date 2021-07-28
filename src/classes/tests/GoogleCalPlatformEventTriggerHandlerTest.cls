@@ -10,22 +10,8 @@ private class GoogleCalPlatformEventTriggerHandlerTest {
         Integer allowedEventCountInChunk = GoogleCalPlatformEventTriggerHandler.calloutChunkSize;
         Integer expectedChunkGroupSize = getChunkGroupSize(allowedEventCountInChunk, totalPlatformEventCount);
 
-        List<Google_Calendar_Platform_Event__e> platformEvents = GoogleCalendarTestDataFactory.createPlatformEvents(totalPlatformEventCount, EventOperationType.INSERT_TYPE, null);
+        assertPlatformEventsResult(totalPlatformEventCount);
 
-        Test.startTest();
-        Test.setMock(HttpCalloutMock.class, setRequestMocks());
-
-        List<Database.SaveResult> sr = EventBus.publish(platformEvents);
-
-        for (Integer i = 0; i <= expectedChunkGroupSize; i++) {
-            Test.getEventBus().deliver();
-        }
-
-        Test.stopTest();
-
-        System.debug('EXPECTED ' + expectedChunkGroupSize + ' ACTUAL ' + GoogleCalPlatformEventTriggerHandler.chunkedPlatformEventsList);
-
-        System.assertEquals(true, areAllEventsPublishedSuccessful(sr));
         System.assertEquals(expectedChunkGroupSize, GoogleCalPlatformEventTriggerHandler.chunkedPlatformEventsList.size(), 'Chunks should be equal');
     }
 
