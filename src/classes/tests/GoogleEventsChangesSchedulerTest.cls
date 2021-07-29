@@ -35,7 +35,7 @@ private class GoogleEventsChangesSchedulerTest {
 
         Test.startTest();
         Test.setMock(HttpCalloutMock.class, setRequestMocks());
-        GoogleEventsChangesScheduler.calloutToGoogleCalendar();
+        GoogleEventsChangesScheduler.syncEventsFromGoogle();
         Test.stopTest();
 
         List<Event> eventsAfter = [SELECT Id FROM Event];

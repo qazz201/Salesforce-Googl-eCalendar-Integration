@@ -6,11 +6,11 @@ public with sharing class GoogleEventsChangesScheduler implements Schedulable {
 
     // System.schedule('GoogleEventsChangesScheduler', '0 0 0,4,8,12,16,20 * * ?', new GoogleEventsChangesScheduler()) - every 4 hours
     public void execute(SchedulableContext context) {
-        calloutToGoogleCalendar();
+        syncEventsFromGoogle();
     }
 
     @Future(callout=true)
-    public static void calloutToGoogleCalendar() {
+    public static void syncEventsFromGoogle() {
         HttpResponse response = new CalendarApi().getEventListChanges();
         List<GoogleEventListStructure.ListItem> googleEventList = GoogleEventListStructure.deserializeEventsToList(response.getBody());
 
@@ -53,7 +53,6 @@ public with sharing class GoogleEventsChangesScheduler implements Schedulable {
         } catch (Exception e) {
             System.debug(e.getMessage());
         }
-
     }
 
     private static List<GoogleEventListStructure.ListItem> getGoogleEventsByStatus(List<GoogleEventListStructure.ListItem> googleEventList, String eventStatus) {

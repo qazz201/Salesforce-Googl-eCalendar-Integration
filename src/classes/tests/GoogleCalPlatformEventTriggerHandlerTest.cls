@@ -41,7 +41,7 @@ private class GoogleCalPlatformEventTriggerHandlerTest {
 
         List<Database.SaveResult> sr = EventBus.publish(platformEvents);
 
-        for (Integer i = 0; i <= expectedChunkGroupSize; i++) {
+        for (Integer i = 0; i < expectedChunkGroupSize; i++) {
             Test.getEventBus().deliver();
 
             EventBusSubscriber ebSubscriber = [
